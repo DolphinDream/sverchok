@@ -17,12 +17,19 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
-from bpy.props import IntProperty, FloatProperty
+from bpy.props import IntProperty, FloatProperty, BoolProperty
 from mathutils.noise import seed_set, random_unit_vector
 
 from sverchok.node_tree import SverchCustomTreeNode
 from sverchok.data_structure import updateNode, match_long_repeat
+from mathutils import Vector
 
+def randomVector(absolute):
+    v = random_unit_vector()
+    if absolute:
+        return Vector((abs(v.x), abs(v.y), abs(v.z)))
+    else:
+        return v
 
 class RandomVectorNodeMK2(bpy.types.Node, SverchCustomTreeNode):
     ''' Random Vectors with len=1 MK2, Unit Vectors'''
@@ -42,11 +49,18 @@ class RandomVectorNodeMK2(bpy.types.Node, SverchCustomTreeNode):
         name='Seed', description='random seed', default=1,
         options={'ANIMATABLE'}, update=updateNode)
 
+    absolute = BoolProperty(name='Absolute', description='Absolute Random Values',
+                            default=False,
+                            update=updateNode)
+
     def sv_init(self, context):
         self.inputs.new('StringsSocket', "Count").prop_name = 'count_inner'
         self.inputs.new('StringsSocket', "Seed").prop_name = 'seed'
         self.inputs.new('StringsSocket', "Scale").prop_name = 'scale'
         self.outputs.new('VerticesSocket', "Random")
+
+    def draw_buttons(self, context, layout):
+        layout.prop(self, "absolute", text="Absolute")
 
     def process(self):
 
@@ -59,6 +73,7 @@ class RandomVectorNodeMK2(bpy.types.Node, SverchCustomTreeNode):
         Coun = count_socket.sv_get(deepcopy=False)[0]
         Seed = seed_socket.sv_get(deepcopy=False)[0]
         Scale = scale_socket.sv_get(deepcopy=False, default=[])[0]
+        absolute = self.absolute;
 
         # outputs
         if random_socket.is_linked:
@@ -75,7 +90,7 @@ class RandomVectorNodeMK2(bpy.types.Node, SverchCustomTreeNode):
                 else:
                     seed_set(140230)
 
-                Random.append([(random_unit_vector()*sc).to_tuple() for i in range(int(max(1, c)))])
+                Random.append([(randomVector(absolute)*sc).to_tuple() for i in range(int(max(1, c)))])
 
             random_socket.sv_set(Random)
 
