@@ -55,6 +55,6 @@ def unregister():
     print("wow. unregistering icons")
     removeCustomIcons()
 
-
-
+if __name__ == '__main__':
+    register()
 
