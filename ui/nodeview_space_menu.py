@@ -222,6 +222,7 @@ classes = [
 
 
 def register():
+    loadCustomIcons()
     for class_name in classes:
         bpy.utils.register_class(class_name)
 
@@ -232,8 +233,7 @@ def register():
 
 
 def unregister():
-    # bpy.types.NODE_MT_add.remove(bpy.types.NODEVIEW_MT_Dynamic_Menu.draw)
-
+    removeCustomIcons()
     for class_name in classes:
         bpy.utils.unregister_class(class_name)
 
