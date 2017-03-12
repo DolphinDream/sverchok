@@ -136,6 +136,12 @@ class SverchokPreferences(AddonPreferences):
         default=(0, 0.5, 0.5), subtype='COLOR',
         update=update_theme)
 
+    color_genx = FloatVectorProperty(
+        name="Generator Extended", description='',
+        size=3, min=0.0, max=1.0,
+        default=(0.4, 0.7, 0.7), subtype='COLOR',
+        update=update_theme)
+
     #  frame change
     frame_change_modes = [
         ("PRE", "Pre", "Update Sverchok before frame change", 0),
@@ -305,7 +311,7 @@ class SverchokPreferences(AddonPreferences):
                     r.prop(self, name)
 
                 col2 = split_viz_colors.column()
-                for name in ['color_lay', 'color_gen']:
+                for name in ['color_lay', 'color_gen', 'color_genx']:
                     r = col2.row()
                     r.prop(self, name)
 

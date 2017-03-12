@@ -36,6 +36,7 @@ default_theme = {
     "Scene": (0, 0.5, 0.2),
     "Layout": (0.674, 0.242, 0.363),
     "Generator": (0, 0.5, 0.5),
+    "Generators Extended": (0.4, 0.7, 0.7),
 }
 
 nipon_blossom = {
@@ -44,6 +45,7 @@ nipon_blossom = {
     "Scene": (0.904933, 1.000000, 0.883421),
     "Layout": (0.602957, 0.674000, 0.564277),
     "Generator": (0.92, 0.92, 0.92),
+    "Generators Extended": (0.95, 0.95, 0.95),
 }
 
 
@@ -58,6 +60,7 @@ def color_callback(self, context):
         ("Scene", "color_sce"),
         ("Layout", "color_lay"),
         ("Generator", "color_gen"),
+        ("Generators Extended", "color_genx"),
     ]
     # stop theme from auto updating and do one call instead of many
     auto_apply_theme = self.auto_apply_theme
@@ -80,6 +83,7 @@ def sv_colors_definition():
             "Scene": prefs.color_sce,
             "Layout": prefs.color_lay,
             "Generator": prefs.color_gen,
+            "Generators Extended": prefs.color_genx,
             }
     else:
         sv_node_colors = default_theme
