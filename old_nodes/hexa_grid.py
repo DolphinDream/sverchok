@@ -28,10 +28,10 @@ from sverchok.utils.geom import circle
 from sverchok.utils.sv_mesh_utils import mesh_join
 
 gridLayoutItems = [
-    ("RECTANGLE", "Rectangle", "", custom_icon("SV_HEXA_GRID_RECTANGLE"), 0),
-    ("TRIANGLE", "Triangle", "", custom_icon("SV_HEXA_GRID_TRIANGLE"), 1),
-    ("DIAMOND", "Diamond", "", custom_icon("SV_HEXA_GRID_DIAMOND"), 2),
-    ("HEXAGON", "Hexagon", "", custom_icon("SV_HEXA_GRID_HEXAGON"), 3)]
+    ("RECTANGLE", " ", "", custom_icon("SV_HEXA_GRID_RECTANGLE"), 0),
+    ("TRIANGLE", " ", "", custom_icon("SV_HEXA_GRID_TRIANGLE"), 1),
+    ("DIAMOND", " ", "", custom_icon("SV_HEXA_GRID_DIAMOND"), 2),
+    ("HEXAGON", " ", "", custom_icon("SV_HEXA_GRID_HEXAGON"), 3)]
 
 
 def generate_grid(center, layout, settings):
@@ -200,10 +200,13 @@ class SvHexaGridNode(bpy.types.Node, SverchCustomTreeNode):
                     inputs.remove(inputs[socket_name])
 
     def draw_buttons(self, context, layout):
-        layout.prop(self, 'gridLayout', expand=False)
-        row = layout.row(align=True)
-        row.prop(self, 'join')
-        row.prop(self, 'center')
+        col = layout.column(align=True)
+        row = col.row(align=True)
+        row.prop(self, 'gridLayout', text=" ", expand=True)
+
+        row = col.row(align=True)
+        row.prop(self, 'join', toggle=True)
+        row.prop(self, 'center', toggle=True)
 
     def process(self):
         # return if no outputs are connected
