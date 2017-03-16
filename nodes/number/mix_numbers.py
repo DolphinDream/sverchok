@@ -18,20 +18,18 @@
 
 
 import bpy
-from bpy.props import IntProperty, FloatProperty, BoolProperty, EnumProperty
+from bpy.props import IntProperty, FloatProperty, BoolProperty, EnumProperty, FloatVectorProperty
 
-import time
 import re
 
 from sverchok.node_tree import SverchCustomTreeNode
 from sverchok.data_structure import updateNode, match_long_repeat, SvSetSocketAnyType
 from sverchok.utils.sv_easing_functions import *
 
-DEBUG=False
-
 typeItems = [
     ("INT", "Integer", "", "", 0),
-    ("FLOAT", "Float", "", "", 1)]
+    ("FLOAT", "Float", "", "", 1),
+    ("VECTOR", "Vector", "", "", 2)]
 
 interplationItems = [
     ("LINEAR", "Linear", "", "IPO_LINEAR", 0),
@@ -54,6 +52,7 @@ easingItems = [
 
 
 class SvMixNumbersNode(bpy.types.Node, SverchCustomTreeNode):
+
     ''' Mix Numbers '''
     bl_idname = 'SvMixNumbersNode'
     bl_label = 'Mix Numbers'
@@ -75,39 +74,50 @@ class SvMixNumbersNode(bpy.types.Node, SverchCustomTreeNode):
                 b = self.exponentialBase
                 e = self.exponentialExponent
                 settings = prepareExponentialSettings(b, e)
-                return lambda v : interpolate(v, settings)
+                return lambda v: interpolate(v, settings)
 
             elif self.interpolation == "BACK":
                 s = self.backScale
-                return lambda v : interpolate(v, s)
+                return lambda v: interpolate(v, s)
 
             elif self.interpolation == "ELASTIC":
                 n = self.elasticBounces
                 b = self.elasticBase
                 e = self.elasticExponent
                 settings = prepareElasticSettings(n, b, e)
-                return lambda v : interpolate(v, settings)
+                return lambda v: interpolate(v, settings)
 
             elif self.interpolation == "BOUNCE":
                 n = self.bounceBounces
                 a = self.bounceAttenuation
                 settings = prepareBounceSettings(n, a)
-                return lambda v : interpolate(v, settings)
+                return lambda v: interpolate(v, settings)
 
             else:
                 return interpolate
 
-
     def update_type(self, context):
+        inputs = self.inputs
+        outputs = self.outputs
+
+        inputs.remove(inputs['v1'])
+        inputs.remove(inputs['v2'])
+        outputs.remove(outputs['Value'])
+
         if self.numType == 'INT':
-            self.inputs['v1'].prop_name = "value_int1"
-            self.inputs['v2'].prop_name = "value_int2"
-        else: # float type
-            self.inputs['v1'].prop_name = "value_float1"
-            self.inputs['v2'].prop_name = "value_float2"
+            inputs.new('StringsSocket', "v1").prop_name = 'value_int1'
+            inputs.new('StringsSocket', "v2").prop_name = 'value_int2'
+            outputs.new('StringsSocket', 'Value')
+        elif self.numType == 'FLOAT':
+            inputs.new('StringsSocket', "v1").prop_name = 'value_float1'
+            inputs.new('StringsSocket', "v2").prop_name = 'value_float2'
+            outputs.new('StringsSocket', 'Value')
+        else:  # VECTOR type
+            inputs.new('VerticesSocket', "v1").prop_name = 'value_vector1'
+            inputs.new('VerticesSocket', "v2").prop_name = 'value_vector2'
+            outputs.new('VerticesSocket', 'Value')
 
         updateNode(self, context)
-
 
     numType = EnumProperty(
         name="Number Type",
@@ -190,26 +200,31 @@ class SvMixNumbersNode(bpy.types.Node, SverchCustomTreeNode):
         default=1,
         update=updateNode)
 
+    value_vector1 = FloatVectorProperty(
+        name='Vector 1', description="Mix VECTOR value 1",
+        update=updateNode)
+
+    value_vector2 = FloatVectorProperty(
+        name='Vector 2', description="Mix VECTOR value 2",
+        update=updateNode)
+
     factor = FloatProperty(
         name="Factor", description="Factor value",
         default=0.5, min=0.0, max=1.0,
         update=updateNode)
 
-
     def sv_init(self, context):
         self.width = 180
+        self.inputs.new('StringsSocket', "f").prop_name = 'factor'
         self.inputs.new('StringsSocket', "v1").prop_name = 'value_float1'
         self.inputs.new('StringsSocket', "v2").prop_name = 'value_float2'
-        self.inputs.new('StringsSocket', "f").prop_name = 'factor'
 
         self.outputs.new('StringsSocket', "Value")
-
 
     def draw_buttons(self, context, layout):
         layout.prop(self, 'numType', expand=True)
         layout.prop(self, 'interpolation', expand=False)
         layout.prop(self, 'easing', expand=False)
-
 
     def draw_buttons_ext(self, context, layout):
         if self.interpolation == "BACK":
@@ -236,6 +251,12 @@ class SvMixNumbersNode(bpy.types.Node, SverchCustomTreeNode):
             box.prop(self, 'bounceAttenuation')
             box.prop(self, 'bounceBounces')
 
+    def mix1(self, v1, v2, t):
+        return v1 * (1 - t) + v2 * t
+
+    def mix2(self, v1, v2, t):
+        s = 1 - t
+        return (v1[0] * s + v2[0] * t, v1[1] * s + v2[1] * t, v1[2] * s + v2[2] * t)
 
     def process(self):
         # return if no outputs are connected
@@ -251,11 +272,12 @@ class SvMixNumbersNode(bpy.types.Node, SverchCustomTreeNode):
 
         interpolate = self.getInterpolator()
 
-        values=[]
+        mix = self.mix2 if self.numType == "VECTOR" else self.mix1
+
+        values = []
         for v1, v2, f in zip(*parameters):
             t = interpolate(f)
-            v = v1*(1-t) + v2*t
-
+            v = mix(v1, v2, t)
             values.append(v)
 
         self.outputs['Value'].sv_set([values])
@@ -267,6 +289,3 @@ def register():
 
 def unregister():
     bpy.utils.unregister_class(SvMixNumbersNode)
-
-if __name__ == '__main__':
-    register()
