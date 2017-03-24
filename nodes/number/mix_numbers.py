@@ -247,16 +247,17 @@ class SvMixNumbersNode(bpy.types.Node, SverchCustomTreeNode):
         input_value2 = self.inputs["v2"].sv_get()[0]
         input_factor = self.inputs["f"].sv_get()[0]
 
-        parameters = match_long_repeat([input_value1, input_value2, input_factor])
+        params = match_long_repeat([input_value1, input_value2, input_factor])
 
         interpolate = self.getInterpolator()
 
-        values=[]
-        for v1, v2, f in zip(*parameters):
-            t = interpolate(f)
-            v = v1*(1-t) + v2*t
+        # values=[]
+        # for v1, v2, f in zip(*parameters):
+        #     t = interpolate(f)
+        #     v = v1*(1-t) + v2*t
 
-            values.append(v)
+        #     values.append(v)
+        values = [v1 + (v2-v1)*interpolate(f) for v1, v2, f in zip(*params)]
 
         self.outputs['Value'].sv_set([values])
 
