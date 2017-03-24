@@ -21,6 +21,7 @@ from bpy.props import IntProperty, FloatProperty, BoolProperty, EnumProperty
 
 from sverchok.node_tree import SverchCustomTreeNode
 from sverchok.data_structure import updateNode, fullList, match_long_repeat
+from sverchok import data_structure
 
 directionItems = [("X", "X", ""), ("Y", "Y", ""), ("Z", "Z", "")]
 
@@ -76,12 +77,23 @@ class SvLineNodeMK2(bpy.types.Node, SverchCustomTreeNode):
         name='Size', description='Size of line',
         default=10.0, update=updateNode)
 
+    def get_default_center(self):
+        addon_name = data_structure.SVERCHOK_NAME
+        addon = bpy.context.user_preferences.addons.get(addon_name)
+        if addon and hasattr(addon, "preferences"):
+            prefs = addon.preferences
+            return prefs.enable_center
+
+        return False
+
     def sv_init(self, context):
         self.inputs.new('StringsSocket', "Num").prop_name = 'num'
         self.inputs.new('StringsSocket', "Step").prop_name = 'step'
 
         self.outputs.new('VerticesSocket', "Vertices", "Vertices")
         self.outputs.new('StringsSocket', "Edges", "Edges")
+
+        self.center = self.get_default_center()
 
     def draw_buttons(self, context, layout):
         col = layout.column(align=True)

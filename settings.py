@@ -183,45 +183,59 @@ class SverchokPreferences(AddonPreferences):
         update=update_defaults)
 
     vert_size = FloatProperty(
-        name = "Vert size", description="Vertex size",
-        min= 0.0, max = 10.0, default = 3.2)
+        name="Vert size", description="Vertex size",
+        min=0.0, max=10.0, default=3.2)
 
     edge_width = FloatProperty(
-        name = "Edge width", description="Edge width",
-        min= 1.0, max = 10.0, default=2.0)
+        name="Edge width", description="Edge width",
+        min=1.0, max=10.0, default=2.0)
+
+    enable_center = BoolProperty(
+        name="Enable Center", description="Enable Center",
+        default=False)
+
+    def split_columns(self, panel, sizes):
+        # normalize sizes
+        col2 = panel
+        cols = []
+        print("")
+        print("sizes = ", sizes)
+        for n in range(len(sizes)):
+            n1 = sizes[n]
+            n2 = sum(sizes[n + 1:])
+            p = n1 / (n1 + n2)
+            print("n = ", n, " n1 = ", n1, " n2 = ", n2)
+            print("ratio ", n, " = ", p)
+            split = col2.split(percentage=p, align=True)
+            col1 = split.column()
+            col2 = split.column()
+            cols.append(col1)
+        return cols
 
     def draw_general_tab_ui(self, tab):
         # print("Draw the GENERAL tab UI")
-        col = tab.column(align=True)
+        cols = self.split_columns(tab, [1, 1, 1])
 
-        split = col.split(percentage=0.5, align=True)
-        colA = split.column()
-        colB = split.column()
+        col = cols[0]
 
-        box = colA.box()
-        # box.prop(self, "show_icons")
-        # box.prop(self, "over_sized_buttons")
-        # box.separator()
+        col.label(text="Debug:")
+        box = col.box()
         box.prop(self, "show_debug")
         box.prop(self, "enable_live_objin", text='Enable Live Object-In')
-        # box.separator()
         box.prop(self, "heat_map", text="Heat Map")
 
-        colB.label(text="Frame change handler:")
-        box = colB.box()
+        col = cols[1]
+
+        col.label(text="Frame change handler:")
+        box = col.box()
         row = box.row()
         row.prop(self, "frame_change_mode", expand=True)
 
     def draw_theme_tab_ui(self, tab):
         # print("Draw the THEME tab UI")
-        col = tab.column(align=True)
+        colA, colB = self.split_columns(tab, [1, 2])
 
-        split = col.split(percentage=0.35, align=True)
-
-        colA = split.column()
-        colB = split.column()
-
-        colA.label(text="")
+        # colA.label(text="")
         colA.label(text="Theme update settings:")
         box = colA.box()
         box.prop(self, 'auto_apply_theme', text="Auto apply theme changes")
@@ -229,22 +243,15 @@ class SverchokPreferences(AddonPreferences):
         box.separator()
         box.operator('node.sverchok_apply_theme', text="Apply theme to layouts")
 
-        colB.prop(self, 'sv_theme')
-
         colA.label(text="UI settings:")
         box = colA.box()
         box.prop(self, "show_icons")
         box.prop(self, "over_sized_buttons")
-
-        # colA.label(text="Debug:")
-        # box = colA.box()
-        # box.prop(self, "show_debug")
         box.prop(self, "enable_icon_manager")
 
-        subsplit = colB.split(percentage=0.5, align=True)
+        colB.prop(self, 'sv_theme')
 
-        colB1 = subsplit.column()
-        colB2 = subsplit.column()
+        colB1, colB2 = self.split_columns(colB, [1, 1])
 
         colB1.label("Nodes Colors:")
         box = colB1.box()
@@ -265,59 +272,28 @@ class SverchokPreferences(AddonPreferences):
             row = box.row()
             row.prop(self, name)
 
-    def split_columns(self, panel, sizes):
-        # normalize sizes
-        col2 = panel
-        cols = []
-        print("")
-        print("sizes = ", sizes)
-        for n in range(len(sizes)):
-            n1 = sizes[n]
-            n2 = sum(sizes[n+1:])
-            p = n1/(n1+n2)
-            print("n = ", n, " n1 = ", n1, " n2 = ", n2)
-            print("ratio ", n, " = ", p)
-            split = col2.split(percentage=p, align=True)
-            col1 = split.column()
-            col2 = split.column()
-            cols.append(col1)
-        return cols
-
     def draw_defaults_tab_ui(self, tab):
         # print("Draw the DEFAULTS tab UI")
+        cols = self.split_columns(tab, [1, 1, 1, 1])
 
-        cols = self.split_columns(tab, [1,2,1])
+        col = cols[0]
+        col.label(text="Viewer Colors:")
+        box = col.box()
+        for name in ['color_verts', 'color_edges', 'color_polys']:
+            row = box.row()
+            row.prop(self, name)
 
-        for col in cols:
-            col.label(text="Column")
-            box = col.box()
+        col = cols[1]
+        col.label(text="Viewer Sizes:")
+        box = col.box()
+        for name in ['vert_size', 'edge_width']:
+            row = box.row()
+            row.prop(self, name)
 
-        if False:
-            col = tab.column(align=True)
-
-            split = col.split(percentage=0.3, align=True)
-            colA = split.column()
-            colB = split.column()
-
-            subsplit = colB.split(percentage=0.5, align=True)
-            colB1 = subsplit.column()
-            colB2 = subsplit.column()
-
-            colA.label(text="Viewer Colors:")
-            box = colA.box()
-            for name in ['color_verts', 'color_edges', 'color_polys']:
-                row = box.row()
-                row.prop(self, name)
-
-            colB1.label(text="Viewer Sizes:")
-            box = colB1.box()
-            for name in ['vert_size', 'edge_width']:
-                row = box.row()
-                row.prop(self, name)
-
-        # colA.label(text="Debug:")
-        # box = colA.box()
-        # box.prop(self, "show_debug")
+        col = cols[2]
+        col.label(text="Enable:")
+        box = col.box()
+        box.prop(self, "enable_center")
 
     def draw(self, context):
         layout = self.layout
@@ -325,7 +301,7 @@ class SverchokPreferences(AddonPreferences):
         col = layout.column(align=True)
         row = col.row(align=True)
         row.prop(self, "tabs", expand=True)
-        row.scale_y = 2.0
+        row.scale_y = 1.5
         row = col.row(align=True)
 
         if self.tabs == "THEMES":

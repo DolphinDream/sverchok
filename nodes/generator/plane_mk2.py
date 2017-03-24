@@ -21,6 +21,7 @@ from bpy.props import BoolProperty, IntProperty, FloatProperty, EnumProperty
 
 from sverchok.node_tree import SverchCustomTreeNode
 from sverchok.data_structure import updateNode, fullList, match_long_repeat
+from sverchok import data_structure
 
 directionItems = [("XY", "XY", ""), ("YZ", "YZ", ""), ("ZX", "ZX", "")]
 
@@ -62,7 +63,7 @@ def make_plane(stepsx, stepsy, center, direction, separate):
         edges.extend(ey)  # edges along Y
 
     if separate:
-        polys = [] # why this? can we separte polygons instead ?
+        polys = []  # why this? can we separte polygons instead ?
     else:
         polys = [[i + j * nx, i + j * nx + 1, i + (j + 1) * nx + 1, i + (j + 1) * nx]
                  for i in range(nx - 1) for j in range(ny - 1)]
@@ -149,6 +150,15 @@ class SvPlaneNodeMK2(bpy.types.Node, SverchCustomTreeNode):
     syncing = BoolProperty(
         name='Syncing', description='Syncing flag', default=False)
 
+    def get_default_center(self):
+        addon_name = data_structure.SVERCHOK_NAME
+        addon = bpy.context.user_preferences.addons.get(addon_name)
+        if addon and hasattr(addon, "preferences"):
+            prefs = addon.preferences
+            return prefs.enable_center
+
+        return False
+
     def sv_init(self, context):
         self.inputs.new('StringsSocket', "Num X").prop_name = 'numx'
         self.inputs.new('StringsSocket', "Num Y").prop_name = 'numy'
@@ -158,6 +168,8 @@ class SvPlaneNodeMK2(bpy.types.Node, SverchCustomTreeNode):
         self.outputs.new('VerticesSocket', "Vertices")
         self.outputs.new('StringsSocket', "Edges")
         self.outputs.new('StringsSocket', "Polygons")
+
+        self.center = self.get_default_center()
 
     def draw_buttons(self, context, layout):
         layout.prop(self, "separate")

@@ -160,7 +160,8 @@ class ObjectsNodeMK2(bpy.types.Node, SverchCustomTreeNode):
 
         row = col.row()
         addon = context.user_preferences.addons.get(sverchok.__name__)
-        if addon.preferences.over_sized_buttons:
+        # if addon.preferences.over_sized_buttons:
+        if addon.preferences.enable_center:
             row.scale_y = 4.0
             op_text = "G E T"
         else:
