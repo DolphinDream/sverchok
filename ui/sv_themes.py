@@ -202,69 +202,6 @@ def save_default_themes():
     save_theme(theme, themeFileName)
 
 
-def save_default_themes2():
-    '''
-        Save the default themes to disk
-    '''
-    theme1 = {
-        "Name": "Default",
-
-        "Node Colors":
-        {
-            "Visualizer": [1.0, 0.3, 0.0],
-            "Text": [1.0, 0.3, 0.0],
-            "Scene": [0.0, 0.5, 0.2],
-            "Layout": [0.674, 0.242, 0.363],
-            "Generators": [0.0, 0.5, 0.5],
-            "Generators Extended": [0.4, 0.7, 0.7]
-        },
-
-        "Error Colors":
-        {
-            "Exception": [0.8, 0.0, 0.0],
-            "No Data": [1.0, 0.3, 0.0]
-        },
-
-        "Heat Map Colors":
-        {
-            "Heat Map Cold": [1.0, 1.0, 1.0],
-            "Heat Map Hot": [0.8, 0.0, 0.0]
-        },
-    }
-
-    theme2 = {
-        "Name": "Nipon Blossom",
-
-        "Node Colors":
-        {
-            "Visualizer": [0.628488, 0.931008, 1.000000],
-            "Text": [1.000000, 0.899344, 0.974251],
-            "Scene": [0.904933, 1.000000, 0.883421],
-            "Layout": [0.602957, 0.674000, 0.564277],
-            "Generators": [0.92, 0.92, 0.92],
-            "Generators Extended": [0.95, 0.95, 0.95],
-        },
-
-        "Error Colors":
-        {
-            "Exception": [0.8, 0.0, 0.0],
-            "No Data": [1.0, 0.3, 0.0],
-        },
-
-        "Heat Map Colors":
-        {
-            "Heat Map Cold": [1.0, 1.0, 1.0],
-            "Heat Map Hot": [0.8, 0.0, 0.0],
-        },
-    }
-
-    t1 = json.loads(json.dumps(theme1), object_pairs_hook=OrderedDict)
-    t2 = json.loads(json.dumps(theme2), object_pairs_hook=OrderedDict)
-
-    save_theme(t1, "default.json")
-    save_theme(t2, "nipon_blossom.json")
-
-
 def get_current_theme():
     '''
         Get the currently selected theme
@@ -288,9 +225,10 @@ def get_node_color(nodeID):
         Return the theme color of a node given its node ID
     '''
     theme = get_current_theme()
+    print("Current theme name: ", theme["Name"])
 
     nodeCategory = get_node_category(nodeID)
-    # print("NodeID: ", nodeID, " is in category:", nodeCategory)
+    print("NodeID: ", nodeID, " is in category:", nodeCategory)
 
     nodeCategory = "Visualizer" if nodeCategory == "Viz" else nodeCategory
 
@@ -299,6 +237,52 @@ def get_node_color(nodeID):
         return theme_color("Node Colors", nodeCategory)
     else:
         print("Category: ", nodeCategory, " NOT found in the theme")
+
+
+def sverchok_trees():
+    for ng in bpy.data.node_groups:
+        if ng.bl_idname == "SverchCustomTreeType":
+            yield ng
+
+
+def apply_theme(ng=None):
+    """
+    Apply theme colors
+    """
+    print("apply theme called")
+    if not ng:
+        for ng in sverchok_trees():
+            apply_theme(ng)
+    else:
+        for n in filter(lambda n: hasattr(n, "set_color"), ng.nodes):
+            n.set_color()
+
+
+class SvApplyTheme(bpy.types.Operator):
+
+    """
+    Apply Sverchok theme
+    """
+    bl_idname = "node.sverchok_apply_theme2"
+    bl_label = "Sverchok Apply theme"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    tree_name = StringProperty()
+
+    def execute(self, context):
+        with sv_preferences() as prefs:
+            _current_theme = prefs.sv_theme
+
+        print("applying sverchok theme: ", _current_theme)
+        if self.tree_name:
+            ng = bpy.data.node_groups.get(self.tree_name)
+            if ng:
+                apply_theme(ng)
+            else:
+                return {'CANCELLED'}
+        else:
+            apply_theme()
+        return {'FINISHED'}
 
 
 class SvAddRemoveTheme(bpy.types.Operator):
@@ -310,7 +294,6 @@ class SvAddRemoveTheme(bpy.types.Operator):
 
     bl_idname = "node.sv_add_remove_theme"
     bl_label = "Add Remove Theme"
-    # bl_options = {'REGISTER', 'UNDO'}
 
     behaviour = StringProperty(default='')
 
@@ -365,10 +348,12 @@ class SvAddRemoveTheme(bpy.types.Operator):
 def register():
     save_default_themes()
     bpy.utils.register_class(SvAddRemoveTheme)
+    bpy.utils.register_class(SvApplyTheme)
 
 
 def unregister():
     bpy.utils.unregister_class(SvAddRemoveTheme)
+    bpy.utils.unregister_class(SvApplyTheme)
 
 if __name__ == '__main__':
     register()

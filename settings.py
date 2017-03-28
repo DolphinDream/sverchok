@@ -8,7 +8,8 @@ from sverchok.core import update_system
 from sverchok.utils import sv_panels_tools
 from sverchok.ui import color_def
 from sverchok.ui.sv_icons import custom_icon
-from sverchok.ui.sv_themes import *
+from sverchok.ui import sv_themes
+# from sverchok.ui.sv_themes import *
 
 tab_items = [
     ("GENERAL", "General", "General settings", custom_icon("SV_PREFS_GENERAL"), 0),
@@ -24,7 +25,8 @@ class SverchokPreferences(AddonPreferences):
     def select_theme(self, context):
         # color_def.color_callback(self, context)
         # self.load_theme_values(self.sv_theme)
-        get_theme_files_names()
+        # get_theme_files_names()
+        sv_themes.apply_theme()
         print("selecting theme: update colors")
 
     def update_debug_mode(self, context):
@@ -39,7 +41,8 @@ class SverchokPreferences(AddonPreferences):
     def update_theme(self, context):
         color_def.rebuild_color_cache()
         if self.auto_apply_theme:
-            color_def.apply_theme()
+            # color_def.apply_theme()
+            sv_themes.apply_theme()
 
     def update_defaults(self, context):
         print("Update Defaults")
@@ -82,12 +85,15 @@ class SverchokPreferences(AddonPreferences):
         default=(1, 1, 1), subtype='COLOR')
 
     #  theme settings
+    themeItems = [("default", "Default", "Default"),
+                  ("nipon_blossom", "Nipon Blossom", "Nipon Blossom")]
+
     sv_theme = EnumProperty(
-        items=color_def.themes,
+        items=themeItems,
         name="Theme preset",
         description="Select a theme preset",
         update=select_theme,
-        default="default_theme")
+        default="default")
 
     auto_apply_theme = BoolProperty(
         name="Apply theme", description="Apply theme automatically",
@@ -264,7 +270,7 @@ class SverchokPreferences(AddonPreferences):
         box.prop(self, 'auto_apply_theme', text="Auto apply theme changes")
         box.prop(self, 'apply_theme_on_open', text="Apply theme when opening file")
         box.separator()
-        box.operator('node.sverchok_apply_theme', text="Apply theme to layouts")
+        box.operator('node.sverchok_apply_theme2', text="Apply theme to layouts")
 
         colA.label(text="UI settings:")
         box = colA.box()
