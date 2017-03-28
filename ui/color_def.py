@@ -86,6 +86,7 @@ def sv_colors_definition():
             }
     else:
         sv_node_colors = default_theme
+
     sv_node_cats = make_node_cats()
     sv_cats_node = {}
     for ca, no in sv_node_cats.items():
@@ -94,6 +95,9 @@ def sv_colors_definition():
                 sv_cats_node[n[0]] = sv_node_colors[ca]
             except:
                 sv_cats_node[n[0]] = False
+
+    print("node cats: ", sv_node_cats)
+    print("cats node: ", sv_cats_node)
     return sv_cats_node
 
 def rebuild_color_cache():
@@ -104,6 +108,7 @@ def get_color(bl_id):
     """
     Get color for bl_id
     """
+    print("getting color for id: ", bl_id)
     if not colors_cache:
         print("building color cache")
         rebuild_color_cache()
