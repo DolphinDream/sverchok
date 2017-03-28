@@ -1,6 +1,6 @@
 import bpy
 from bpy.types import AddonPreferences
-from bpy.props import BoolProperty, FloatVectorProperty, EnumProperty, IntProperty, FloatProperty
+from bpy.props import BoolProperty, FloatVectorProperty, EnumProperty, IntProperty, FloatProperty, StringProperty
 
 from sverchok import data_structure
 from sverchok.core import handlers
@@ -23,12 +23,14 @@ tab_items = [
     ("DEFAULTS", "Defaults", "Various node default values", custom_icon("SV_PREFS_DEVELOPER"), 2),
 ]
 
-_theme_collection = {}
+_theme_collection = OrderedDict()
 _current_theme = "default"
 
-def get_themes_path():
-    """ create if it doesn't exist """
 
+def get_themes_path():
+    '''
+        Get the themes path. Create one first if it doesn't exist.
+    '''
     dirPath = os.path.join(bpy.utils.user_resource('DATAFILES', path='sverchok', create=True))
     themePath = os.path.join(dirPath, 'themes')
 
@@ -36,57 +38,67 @@ def get_themes_path():
     if not os.path.exists(themePath):
         os.mkdir(themePath)
 
-    # print("get themes path: ", themePath)
-
     return themePath
 
 
-def get_theme_files_names():
+def get_theme_files():
+    '''
+        Get the theme files for all the themes present at the themes path
+    '''
     themePath = get_themes_path()
-    themeFiles = os.path.join(themePath, "*.json")
-    themeFileNames = [os.path.basename(x) for x in glob.glob(themeFiles)]
+    themeFilePattern = os.path.join(themePath, "*.json")
+    themeFiles = glob.glob(themeFilePattern)
 
-    # for themeFile in themeFileNames:
-    #     themeName = os.path.splitext(themeFile)[0]
-    #     print(themeName)
+    return themeFiles
+
+
+def get_theme_files_names():
+    '''
+        Get the theme file base names for all themes present at the theme path
+    '''
+    themeFiles = get_theme_files()
+    themeFileNames = [os.path.basename(x) for x in glob.glob(themeFiles)]
+    themeFileNames = [os.path.splitext(f)[0] for f in themeFileNames]
 
     return themeFileNames
 
 
-def load_theme(fileName):
-    print("loading theme: ", fileName)
+def load_theme(filePath):
+    '''
+        Load a theme from the given file path
+    '''
+    print("loading theme: ", filePath)
     theme = {}
-    with open(fileName, 'r') as infile:
+    with open(filePath, 'r') as infile:
         theme = json.load(infile, object_pairs_hook=OrderedDict)
 
     return theme
 
 
 def load_themes():
+    '''
+        Load all the themes from disk into a cache
+    '''
     if _theme_collection:  # return if themes already loaded
+        print("The themes are already loaded (SKIP)")
         return
 
-    print("loading the themes")
+    print("Loading the themes...")
 
-    themePath = get_themes_path()
-    themeFileNames = get_theme_files_names()
-    print(themeFileNames)
+    themeFiles = get_theme_files()
 
-    themes = OrderedDict()
-    for f in themeFileNames:
-        # print("filename: ", f)
-        filePath = os.path.join(themePath, f)
+    for f in themeFiles:
         # print("filepath: ", filePath)
-        theme = load_theme(filePath)
-        fileName = os.path.splitext(f)[0]
-        themes[fileName] = theme
+        theme = load_theme(f)
+        fileName = os.path.splitext(os.path.basename(f))[0]
+        print("filename : ", fileName)
+        # fileName = os.path.splitext(f)[0]
+        _theme_collection[fileName] = theme
 
-    # print("themes = ", themes)
-
-    for fileName, theme in themes.items():
+    for fileName, theme in _theme_collection.items():
         print("Theme : ", fileName, " is called: ", theme["Name"])
 
-    _theme_collection["main"] = themes
+    print(_theme_collection)
 
 
 def save_theme(theme, fileName):
@@ -167,15 +179,16 @@ def save_default_themes():
 
 def theme_color(group, name):
     '''
-        Return the color in curren theme for given group & name
+        Return the color int the current theme for the given group & name
     '''
-    load_themes() # loads the theme if not already loaded
+    load_themes()  # loads the themes if not already loaded
 
-    theme = _theme_collection["main"][_current_theme]
+    theme = _theme_collection[_current_theme]
     return theme[group][name]
 
 
 class SvAddThemePreset(bpy.types.Operator):
+
     """ Add theme preset """
     bl_idname = "node.sv_add_theme_preset"
     bl_label = "Save Theme Preset"
@@ -184,15 +197,7 @@ class SvAddThemePreset(bpy.types.Operator):
 
     def execute(self, context):
         print('Adding Theme Preset')
-        # sv_node_cats = make_node_cats()
-        # print("node cats: ", sv_node_cats)
-        # pprint(sv_node_cats["Generators"])
-        # print(self.color_viz)
-        # get_theme_files_names()
-        # load_themes()
-        # color_viz = theme_color("Node Colors", "Visualizer")
-        # print("colorviz: ", color_viz)
-        _current_theme = themeName
+        _current_theme = self.themeName
         for name in ["Visualizer", "Text", "Scene", "Layout", "Scene", "Generators", "Generators Extended"]:
             color = theme_color("Node Colors", name)
             print("Color for: ", name, " is : ", color)
@@ -201,6 +206,7 @@ class SvAddThemePreset(bpy.types.Operator):
 
 
 class SvRemoveThemePreset(bpy.types.Operator):
+
     """ Remove theme preset """
     bl_idname = "node.sv_remove_theme_preset"
     bl_label = "Remove Theme Preset"
@@ -237,46 +243,11 @@ class SverchokPreferences(AddonPreferences):
 
     bl_idname = __package__
 
-    # def load_theme_values(self, themeName):
-    #     ''' load theme settings from file'''
-    #     print("Loading theme values")
-    #     # settings = {}
-
-    #     fullpath = get_theme_fullpath()
-
-    #     with open(fullpath, encoding='utf-8') as data_file:
-    #         settings = json.load(data_file)
-
-    #     print("sv theme", themeName)
-    #     if themeName == "default_theme":
-    #         themeName = "Default"
-    #     elif themeName == "nipon_blossom":
-    #         themeName = "Nipon Blossom"
-
-    #     # pprint(settings)
-    #     theme = settings[themeName]
-    #     nodeColors = theme["Node Colors"]
-    #     self.color_viz = nodeColors["Visualizer"]["color"]
-    #     self.color_tex = nodeColors["Text"]["color"]
-    #     self.color_lay = nodeColors["Layout"]["color"]
-    #     self.color_sce = nodeColors["Scene"]["color"]
-    #     self.color_gen = nodeColors["Generators"]["color"]
-    #     self.color_genx = nodeColors["Generators Extended"]["color"]
-
-    #     errorColors = theme["Error Colors"]
-    #     self.exception_color = errorColors["Error"]["color"]
-    #     self.no_data_color = errorColors["No Data"]["color"]
-
-    #     heatMapColors = theme["Heat Map Colors"]
-    #     self.heat_map_hot = heatMapColors["Heat Map Hot"]["color"]
-    #     self.heat_map_cold = heatMapColors["Heat Map Cold"]["color"]
-
-    #     # print(type(settings))
-
     def select_theme(self, context):
         # color_def.color_callback(self, context)
         # self.load_theme_values(self.sv_theme)
         get_theme_files_names()
+        print("selecting theme: update colors")
 
     def update_debug_mode(self, context):
         data_structure.DEBUG_MODE = self.show_debug
@@ -295,9 +266,6 @@ class SverchokPreferences(AddonPreferences):
     def update_defaults(self, context):
         print("Update Defaults")
         self.load_theme_values()
-
-        # nodes = settings.get("nodes")
-        # properties.color_viz = nodes("option_vertices")
 
     #  debugish...
     show_debug = BoolProperty(
@@ -344,11 +312,11 @@ class SverchokPreferences(AddonPreferences):
         default="default_theme")
 
     auto_apply_theme = BoolProperty(
-        name="Apply theme", description="Apply theme automaticlly",
+        name="Apply theme", description="Apply theme automatically",
         default=False)
 
     apply_theme_on_open = BoolProperty(
-        name="Apply theme", description="Apply theme automaticlly",
+        name="Apply theme", description="Apply theme automatically on open",
         default=False)
 
     color_viz = FloatVectorProperty(
@@ -466,17 +434,18 @@ class SverchokPreferences(AddonPreferences):
         name="Centering ON", description="Set centering to ON in various nodes",
         default=False)
 
-    def split_columns(self, panel, sizes):
+    def split_columns(self, panel, ratios):
+        '''
+            Splits the given panel into columns based on the given ratios
+            e.g ratios = [1, 2, 1] or [.2, .3, .2] etc
+            Note: The sum of all ratio numbers don't need to be normalized
+        '''
         col2 = panel
         cols = []
-        # print("")
-        # print("sizes = ", sizes)
-        for n in range(len(sizes)):
-            n1 = sizes[n]
-            n2 = sum(sizes[n + 1:])
-            p = n1 / (n1 + n2)
-            # print("n = ", n, " n1 = ", n1, " n2 = ", n2)
-            # print("ratio ", n, " = ", p)
+        for n in range(len(ratios)):
+            n1 = ratios[n]  # size of the current column
+            n2 = sum(ratios[n + 1:])  # size of all remaining columns
+            p = n1 / (n1 + n2)  # percentage split of current vs remaming columns
             split = col2.split(percentage=p, align=True)
             col1 = split.column()
             col2 = split.column()
