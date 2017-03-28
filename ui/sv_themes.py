@@ -52,6 +52,11 @@ def cache_category_node_list():
     # print("category node list = ", _category_node_list)
 
 
+def get_node_category(nodeID):
+    cache_category_node_list()  # make sure the category-node list is cached
+    return _category_node_list[nodeID] # @todo check if nodeID is in list
+
+
 def get_themes_path():
     '''
         Get the themes path. Create one first if it doesn't exist.
@@ -76,17 +81,6 @@ def get_theme_files():
     themeFiles = glob.glob(themeFilePattern)
 
     return themeFiles
-
-
-def get_theme_files_names():
-    '''
-        Get the theme file base names for all themes present at the theme path
-    '''
-    themeFiles = get_theme_files()
-    themeFileNames = [os.path.basename(x) for x in glob.glob(themeFiles)]
-    themeFileNames = [os.path.splitext(f)[0] for f in themeFileNames]
-
-    return themeFileNames
 
 
 def load_theme(filePath):
@@ -203,29 +197,31 @@ def save_default_themes():
     save_theme(t2, "nipon_blossom.json")
 
 
-def theme_color(group, name):
+def get_current_theme():
+    load_themes()  # make sure the themes are loaded
+    return _theme_collection[_current_theme] # @todo check if name exists
+
+
+def theme_color(group, category):
     '''
-        Return the color int the current theme for the given group & name
+        Return the color in the current theme for the given group & category
         Groups : "Node Colors", "Error Colors", "Heat Map Colors" etc
-        Name : "Visualizer", "Text", "Generators" etc
+        Category : "Visualizer", "Text", "Generators" etc
     '''
-    load_themes()  # loads the themes if not already loaded
-
-    # print("theme collection: ", _theme_collection)
-
-    theme = _theme_collection[_current_theme]
-    return theme[group][name]
+    theme = get_current_theme()
+    return theme[group][category]
 
 
 def get_node_color(nodeID):
     '''
-        Return the theme color of a node given its node ID (category)
+        Return the theme color of a node given its node ID
     '''
-    nodeCategory = _category_node_list[nodeID]
-    # print("NodeID: ", nodeID, " is in category:", nodeCategory)
-    # print("theme collection: ", _theme_collection)
+    theme = get_current_theme()
 
-    theme = _theme_collection[_current_theme]
+    nodeCategory = get_node_category(nodeID)
+    # print("NodeID: ", nodeID, " is in category:", nodeCategory)
+
+    nodeCategory = "Visualizer" if nodeCategory == "Viz" else nodeCategory
 
     if nodeCategory in theme["Node Colors"]:
         print("Category: ", nodeCategory, " found in the theme")
@@ -252,8 +248,8 @@ class SvAddRemoveTheme(bpy.types.Operator):
         print("add_theme in action")
 
         with sv_preferences() as prefs:
-            print("Prefs color_viz:", prefs.color_viz)
-            print("Prefs color_tex:", prefs.color_tex)
+            # print("Prefs color_viz:", prefs.color_viz)
+            # print("Prefs color_tex:", prefs.color_tex)
 
             themeName = "Dolphin Dream"
 
@@ -264,7 +260,7 @@ class SvAddRemoveTheme(bpy.types.Operator):
 
             theme["Name"] = themeName
 
-            nodeColors["Visualizers"] = prefs.color_viz[:]
+            nodeColors["Visualizer"] = prefs.color_viz[:]
             nodeColors["Text"] = prefs.color_tex[:]
             nodeColors["Scene"] = prefs.color_sce[:]
             nodeColors["Layout"] = prefs.color_lay[:]
