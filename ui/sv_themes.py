@@ -18,7 +18,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
-from bpy.props import BoolProperty, FloatVectorProperty, EnumProperty, IntProperty, FloatProperty, StringProperty
+from bpy.props import StringProperty
 
 from collections import OrderedDict
 
@@ -27,8 +27,9 @@ import json
 import glob
 from pprint import pprint
 
+import sverchok
 from sverchok.menu import make_node_cats
-
+from sverchok.utils.context_managers import sv_preferences
 
 _category_node_list = {}
 _theme_collection = OrderedDict()
@@ -36,6 +37,9 @@ _current_theme = "default"
 
 
 def cache_category_node_list():
+    '''
+        Cache category-node list for color access.
+    '''
     if _category_node_list:
         return
 
@@ -52,7 +56,8 @@ def get_themes_path():
     '''
         Get the themes path. Create one first if it doesn't exist.
     '''
-    dirPath = os.path.join(bpy.utils.user_resource('DATAFILES', path='sverchok', create=True))
+    dirPath = os.path.join(bpy.utils.user_resource(
+        'DATAFILES', path='sverchok', create=True))
     themePath = os.path.join(dirPath, 'themes')
 
     # create theme path if it doesn't exist
@@ -101,7 +106,7 @@ def load_themes():
         Load all the themes from disk into a cache
     '''
     if _theme_collection:  # return if themes already loaded
-        print("The themes are already loaded (SKIP)")
+        # print("The themes are already loaded (SKIP)")
         return
 
     print("Loading the themes...")
@@ -201,20 +206,24 @@ def save_default_themes():
 def theme_color(group, name):
     '''
         Return the color int the current theme for the given group & name
+        Groups : "Node Colors", "Error Colors", "Heat Map Colors" etc
+        Name : "Visualizer", "Text", "Generators" etc
     '''
     load_themes()  # loads the themes if not already loaded
 
-    print("theme collection: ", _theme_collection)
+    # print("theme collection: ", _theme_collection)
 
     theme = _theme_collection[_current_theme]
     return theme[group][name]
 
 
 def get_node_color(nodeID):
+    '''
+        Return the theme color of a node given its node ID (category)
+    '''
     nodeCategory = _category_node_list[nodeID]
-    print("NodeID: ", nodeID, " is in category:", nodeCategory)
-
-    print("theme collection: ", _theme_collection)
+    # print("NodeID: ", nodeID, " is in category:", nodeCategory)
+    # print("theme collection: ", _theme_collection)
 
     theme = _theme_collection[_current_theme]
 
@@ -223,71 +232,81 @@ def get_node_color(nodeID):
         return theme_color("Node Colors", nodeCategory)
     else:
         print("Category: ", nodeCategory, " NOT found in the theme")
-        # return
 
 
-class SvAddThemePreset(bpy.types.Operator):
+class SvAddRemoveTheme(bpy.types.Operator):
+    """
+        Add current settings as new theme or remove currently selected theme.
+        Note: it doesn't work on hardcoded themes: default, nippon_blossom
+    """
 
-    """ Add theme preset """
-    bl_idname = "node.sv_add_theme_preset"
-    bl_label = "Save Theme Preset"
+    bl_idname = "node.sv_add_remove_theme"
+    bl_label = "Add Remove Theme"
+    # bl_options = {'REGISTER', 'UNDO'}
 
-    themeName = StringProperty()
+    behaviour = StringProperty(default='')
+
+    def add_theme(self):
+        # prefs = sv_preferences()
+
+        print("add_theme in action")
+
+        with sv_preferences() as prefs:
+            print("Prefs color_viz:", prefs.color_viz)
+            print("Prefs color_tex:", prefs.color_tex)
+
+            themeName = "Dolphin Dream"
+
+            theme = OrderedDict()
+            nodeColors = OrderedDict()
+            errorColors = OrderedDict()
+            heatMapColors = OrderedDict()
+
+            theme["Name"] = themeName
+
+            nodeColors["Visualizers"] = prefs.color_viz[:]
+            nodeColors["Text"] = prefs.color_tex[:]
+            nodeColors["Scene"] = prefs.color_sce[:]
+            nodeColors["Layout"] = prefs.color_lay[:]
+            nodeColors["Generators"] = prefs.color_gen[:]
+            nodeColors["Generators Extended"] = prefs.color_genx[:]
+
+            errorColors["Exception Color"] = prefs.exception_color[:]
+            errorColors["No Data"] = prefs.no_data_color[:]
+
+            heatMapColors["Heat Map Cold"] = prefs.heat_map_cold[:]
+            heatMapColors["Heat Map Hot"] = prefs.heat_map_cold[:]
+
+            theme["Node Colors"] = nodeColors
+            theme["Error Colors"] = errorColors
+            theme["Heat Map Colors"] = heatMapColors
+
+            print("theme: ", theme)
+
+            save_theme(theme, "dolphin_dream.json")
+
+    def remove_theme(self):
+        print("remove_theme in action")
 
     def execute(self, context):
-        print('Adding Theme Preset')
-        _current_theme = self.themeName
-        for name in ["Visualizer", "Text", "Scene", "Layout", "Scene", "Generators", "Generators Extended"]:
-            color = theme_color("Node Colors", name)
-            print("Color for: ", name, " is : ", color)
+        if self.behaviour == 'add':
+            self.add_theme()
+        elif self.behaviour == 'remove':
+            self.remove_theme()
+        else:
+            print("Warning: invalid add/remove theme behavior")
 
         return {'FINISHED'}
-
-
-class SvRemoveThemePreset(bpy.types.Operator):
-
-    """ Remove theme preset """
-    bl_idname = "node.sv_remove_theme_preset"
-    bl_label = "Remove Theme Preset"
-
-    def execute(self, context):
-        print('Removing Theme Preset')
-        return {'FINISHED'}
-
-
-# class SvAddRemoveTheme(bpy.types.Operator):
-#     """
-#         add current settings as new theme or remove currently selected theme
-#         (doesn't work on hardcoded themes: default, nippon_blossom)
-#     """
-
-#     bl_idname = "node.sv_add_remove_theme"
-#     bl_label = "Add Remove Theme"
-#     # bl_options = {'REGISTER', 'UNDO'}
-
-#     behaviour = bpy.props.StringProperty(default='')
-
-#     def execute(self, context):
-#         n = context.node
-
-#         if self.behaviour == 'store current theme':
-#             print("A")
-#         elif self.behaviour == 'remove current theme':
-#             print("B")
-
-#         return {'FINISHED'}
 
 
 def register():
     save_default_themes()
     cache_category_node_list()
-    bpy.utils.register_class(SvAddThemePreset)
-    bpy.utils.register_class(SvRemoveThemePreset)
+    bpy.utils.register_class(SvAddRemoveTheme)
 
 
 def unregister():
-    bpy.utils.unregister_class(SvAddThemePreset)
-    bpy.utils.unregister_class(SvRemoveThemePreset)
+    bpy.utils.unregister_class(SvAddRemoveTheme)
 
 if __name__ == '__main__':
     register()

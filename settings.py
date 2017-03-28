@@ -274,8 +274,8 @@ class SverchokPreferences(AddonPreferences):
 
         row = colB.row(align=True)
         row.prop(self, 'sv_theme')
-        row.operator("node.sv_add_theme_preset", text="", icon='ZOOMIN').themeName = self.sv_theme
-        row.operator("node.sv_remove_theme_preset", text="", icon='ZOOMOUT')
+        row.operator("node.sv_add_remove_theme", text="", icon='ZOOMIN').behaviour = "add"
+        row.operator("node.sv_add_remove_theme", text="", icon='ZOOMOUT').behaviour = "remove"
 
         colB1, colB2 = self.split_columns(colB, [1, 1])
 
