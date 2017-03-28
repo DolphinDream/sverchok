@@ -9,8 +9,12 @@ from sverchok.utils import sv_panels_tools
 from sverchok.ui import color_def
 from sverchok.ui.sv_icons import custom_icon
 
+from sverchok.menu import make_node_cats
+from collections import OrderedDict
+
 import os
 import json
+import glob
 from pprint import pprint
 
 tab_items = [
@@ -19,76 +23,213 @@ tab_items = [
     ("DEFAULTS", "Defaults", "Various node default values", custom_icon("SV_PREFS_DEVELOPER"), 2),
 ]
 
-def get_theme_fullpath():
+def get_themes_path():
     """ create if it doesn't exist """
 
-    dirpath = os.path.join(bpy.utils.user_resource('DATAFILES', path='sverchok', create=True))
-    themepath = os.path.join(dirpath, 'themes')
-    fullpath = os.path.join(themepath, 'default.json')
+    dirPath = os.path.join(bpy.utils.user_resource('DATAFILES', path='sverchok', create=True))
+    themePath = os.path.join(dirPath, 'themes')
 
     # create theme path if it doesn't exist
-    if not os.path.exists(themepath):
-        os.mkdir(themepath)
+    if not os.path.exists(themePath):
+        os.mkdir(themePath)
 
-    if not os.path.exists(fullpath):
-        with open(fullpath, 'w', encoding='utf-8') as _:
-            pass
+    # print("get themes path: ", themePath)
 
-    print("get theme fullpath: ", fullpath)
+    return themePath
 
-    return fullpath
+def get_theme_files_names():
+    themePath = get_themes_path()
+    themeFiles = os.path.join(themePath, "*.json")
+    themeFileNames = [os.path.basename(x) for x in glob.glob(themeFiles)]
 
+    for themeFile in themeFileNames:
+        themeName = os.path.splitext(themeFile)[0]
+        print(themeName)
+
+    return themeFileNames
+
+def load_theme(fileName):
+    print("loading theme: ", fileName)
+    theme = {}
+    with open(fileName, 'r') as infile:
+        theme = json.load(infile, object_pairs_hook=OrderedDict)
+
+    return theme
+
+_theme_collection = {}
+
+def load_themes():
+    themePath = get_themes_path()
+    themeFileNames = get_theme_files_names()
+    themes = OrderedDict()
+    print(themeFileNames)
+    for f in themeFileNames:
+        print("filename: ", f)
+        filePath = os.path.join(themePath, f)
+        print("filepath: ", filePath)
+        theme = load_theme(filePath)
+        fileName = os.path.splitext(f)[0]
+        themes[fileName] = theme
+
+    print("themes = ", themes)
+
+    for fileName, theme in themes.items():
+        # tn = [key for key in themes[name].keys()][0]
+        print("Theme : ", fileName, " is called: ", theme["Name"])
+
+    _theme_collection["main"] = themes
+
+# def create_default_themes():
+#     default_theme = {
+#         "Viz": (1, 0.3, 0),
+#         "Text": (0.5, 0.5, 1),
+#         "Scene": (0, 0.5, 0.2),
+#         "Layout": (0.674, 0.242, 0.363),
+#         "Generators": (0, 0.5, 0.5),
+#         "Generators Extended": (0.4, 0.7, 0.7),
+#         }
+
+#     nipon_blossom = {
+#         "Viz": (0.628488, 0.931008, 1.000000),
+#         "Text": (1.000000, 0.899344, 0.974251),
+#         "Scene": (0.904933, 1.000000, 0.883421),
+#         "Layout": (0.602957, 0.674000, 0.564277),
+#         "Generators": (0.92, 0.92, 0.92),
+#         "Generators Extended": (0.95, 0.95, 0.95),
+#         }
+
+#     settings = OrderedDict()
+#     theme = OrderedDict()
+#     nodeColors = OrderedDict()
+#     errorColors = OrderedDict()
+#     heatMapColors = OrderedDict()
+
+#     nodeColors["Viz"] = [1, 0.3, 0]
+#     nodeColors["Text"] = [0.5, 0.5, 1]
+#     nodeColors["Scene"] = [0, 0.5, 0.2]
+#     nodeColors["Layout"] = [0.674, 0.242, 0.363]
+#     nodeColors["Generators"] = [0, 0.5, 0.5]
+#     nodeColors["Generators Extended"] = [0.4, 0.7, 0.7]
+
+#     errorColors["Exception Color"] = [0.4, 0.7, 0.7]
+#     errorColors["No Data"] = [0.4, 0.7, 0.7]
+
+#     heatMapColors["Heat Map Cold"] = [0.4, 0.7, 0.7]
+#     heatMapColors["Heat Map Hot"] = [0.4, 0.7, 0.7]
+
+#     theme["Node Colors"] = nodeColors
+#     theme["Error Colors"] = errorColors
+#     theme["Heat Map Colors"] = heatMapColors
+
+#     settings["defaut"] = theme
+
+def get_color(theme, group, name):
+  # print("get theme color for group")
+  # print(theme)
+  # print(group)
+  # print(name)
+  return theme[group][name]
+
+def theme_color(group, name):
+    theme = _theme_collection["main"]["default"]
+    return get_color(theme, group, name)
+
+class SvAddThemePreset(bpy.types.Operator):
+    """ Add theme preset """
+    bl_idname = "node.sv_add_theme_preset"
+    bl_label = "Save Theme Preset"
+
+    def execute(self, context):
+        print('Adding Theme Preset')
+        # sv_node_cats = make_node_cats()
+        # print("node cats: ", sv_node_cats)
+        # pprint(sv_node_cats["Generators"])
+        # print(self.color_viz)
+        # get_theme_files_names()
+        load_themes()
+        color_viz = theme_color("Node Colors", "Visualizer")
+        print("colorviz: ", color_viz)
+
+
+        return {'FINISHED'}
+
+class SvRemoveThemePreset(bpy.types.Operator):
+    """ Remove theme preset """
+    bl_idname = "node.sv_remove_theme_preset"
+    bl_label = "Remove Theme Preset"
+
+    def execute(self, context):
+        print('Removing Theme Preset')
+        return {'FINISHED'}
+
+
+# class SvAddRemoveTheme(bpy.types.Operator):
+#     """
+#         add current settings as new theme or remove currently selected theme
+#         (doesn't work on hardcoded themes: default, nippon_blossom)
+#     """
+
+#     bl_idname = "node.sv_add_remove_theme"
+#     bl_label = "Add Remove Theme"
+#     # bl_options = {'REGISTER', 'UNDO'}
+
+#     behaviour = bpy.props.StringProperty(default='')
+
+#     def execute(self, context):
+#         n = context.node
+
+#         if self.behaviour == 'store current theme':
+#             print("A")
+#         elif self.behaviour == 'remove current theme':
+#             print("B")
+
+#         return {'FINISHED'}
 
 
 class SverchokPreferences(AddonPreferences):
 
     bl_idname = __package__
 
-    def load_theme_values(self, themeName):
-        ''' load theme settings from file'''
-        print("Loading theme values")
-        # settings = {}
+    # def load_theme_values(self, themeName):
+    #     ''' load theme settings from file'''
+    #     print("Loading theme values")
+    #     # settings = {}
 
-        fullpath = get_theme_fullpath()
+    #     fullpath = get_theme_fullpath()
 
-        with open(fullpath, encoding='utf-8') as data_file:
-            settings = json.load(data_file)
+    #     with open(fullpath, encoding='utf-8') as data_file:
+    #         settings = json.load(data_file)
 
-        print("sv theme", themeName)
-        if themeName == "default_theme":
-            themeName = "Default"
-        elif themeName == "nipon_blossom":
-            themeName = "Nipon Blossom"
+    #     print("sv theme", themeName)
+    #     if themeName == "default_theme":
+    #         themeName = "Default"
+    #     elif themeName == "nipon_blossom":
+    #         themeName = "Nipon Blossom"
 
-        # pprint(settings)
-        theme = settings[themeName]
-        nodeColors = theme["Node Colors"]
-        self.color_viz = nodeColors["Visualizer"]["color"]
-        self.color_tex = nodeColors["Text"]["color"]
-        self.color_lay = nodeColors["Layout"]["color"]
-        self.color_sce = nodeColors["Scene"]["color"]
-        self.color_gen = nodeColors["Generators"]["color"]
-        self.color_genx = nodeColors["Generators Extended"]["color"]
+    #     # pprint(settings)
+    #     theme = settings[themeName]
+    #     nodeColors = theme["Node Colors"]
+    #     self.color_viz = nodeColors["Visualizer"]["color"]
+    #     self.color_tex = nodeColors["Text"]["color"]
+    #     self.color_lay = nodeColors["Layout"]["color"]
+    #     self.color_sce = nodeColors["Scene"]["color"]
+    #     self.color_gen = nodeColors["Generators"]["color"]
+    #     self.color_genx = nodeColors["Generators Extended"]["color"]
 
-        errorColors = theme["Error Colors"]
-        self.exception_color = errorColors["Error"]["color"]
-        self.no_data_color = errorColors["No Data"]["color"]
+    #     errorColors = theme["Error Colors"]
+    #     self.exception_color = errorColors["Error"]["color"]
+    #     self.no_data_color = errorColors["No Data"]["color"]
 
-        heatMapColors = theme["Heat Map Colors"]
-        self.heat_map_hot = heatMapColors["Heat Map Hot"]["color"]
-        self.heat_map_cold = heatMapColors["Heat Map Cold"]["color"]
+    #     heatMapColors = theme["Heat Map Colors"]
+    #     self.heat_map_hot = heatMapColors["Heat Map Hot"]["color"]
+    #     self.heat_map_cold = heatMapColors["Heat Map Cold"]["color"]
 
-        # print(type(settings))
-
-    def add_theme_preset(self, context):
-        print("Adding theme preset")
-
-    def remove_theme_preset(self, context):
-        print("Removing theme preset")
+    #     # print(type(settings))
 
     def select_theme(self, context):
         # color_def.color_callback(self, context)
-        self.load_theme_values(self.sv_theme)
+        # self.load_theme_values(self.sv_theme)
+        get_theme_files_names()
 
     def update_debug_mode(self, context):
         data_structure.DEBUG_MODE = self.show_debug
@@ -340,8 +481,8 @@ class SverchokPreferences(AddonPreferences):
 
         row = colB.row(align=True)
         row.prop(self, 'sv_theme')
-        row.operator(text="", icon='ZOOMIN').fn_name="add_theme_preset"
-        # row.operator("remove_theme_preset", text="", icon='ZOOMOUT')
+        row.operator("node.sv_add_theme_preset", text="", icon='ZOOMIN')
+        row.operator("node.sv_remove_theme_preset", text="", icon='ZOOMOUT')
 
         colB1, colB2 = self.split_columns(colB, [1, 1])
 
@@ -425,10 +566,13 @@ class SverchokPreferences(AddonPreferences):
 
 def register():
     bpy.utils.register_class(SverchokPreferences)
-
+    bpy.utils.register_class(SvAddThemePreset)
+    bpy.utils.register_class(SvRemoveThemePreset)
 
 def unregister():
     bpy.utils.unregister_class(SverchokPreferences)
+    bpy.utils.unregister_class(SvAddThemePreset)
+    bpy.utils.unregister_class(SvRemoveThemePreset)
 
 if __name__ == '__main__':
     register()
