@@ -53,8 +53,11 @@ def cache_category_node_list():
 
 
 def get_node_category(nodeID):
+    '''
+        Get the note category for the given node ID
+    '''
     cache_category_node_list()  # make sure the category-node list is cached
-    return _category_node_list[nodeID] # @todo check if nodeID is in list
+    return _category_node_list[nodeID]  # @todo check if nodeID is in list
 
 
 def get_themes_path():
@@ -99,8 +102,7 @@ def load_themes():
     '''
         Load all the themes from disk into a cache
     '''
-    if _theme_collection:  # return if themes already loaded
-        # print("The themes are already loaded (SKIP)")
+    if _theme_collection:  # return if the themes are already loaded
         return
 
     print("Loading the themes...")
@@ -198,8 +200,11 @@ def save_default_themes():
 
 
 def get_current_theme():
+    '''
+        Get the currently selected theme
+    '''
     load_themes()  # make sure the themes are loaded
-    return _theme_collection[_current_theme] # @todo check if name exists
+    return _theme_collection[_current_theme]  # @todo check if name exists
 
 
 def theme_color(group, category):
@@ -231,10 +236,10 @@ def get_node_color(nodeID):
 
 
 class SvAddRemoveTheme(bpy.types.Operator):
-    """
+    '''
         Add current settings as new theme or remove currently selected theme.
         Note: it doesn't work on hardcoded themes: default, nippon_blossom
-    """
+    '''
 
     bl_idname = "node.sv_add_remove_theme"
     bl_label = "Add Remove Theme"
@@ -248,9 +253,6 @@ class SvAddRemoveTheme(bpy.types.Operator):
         print("add_theme in action")
 
         with sv_preferences() as prefs:
-            # print("Prefs color_viz:", prefs.color_viz)
-            # print("Prefs color_tex:", prefs.color_tex)
-
             themeName = "Dolphin Dream"
 
             theme = OrderedDict()
@@ -297,7 +299,6 @@ class SvAddRemoveTheme(bpy.types.Operator):
 
 def register():
     save_default_themes()
-    cache_category_node_list()
     bpy.utils.register_class(SvAddRemoveTheme)
 
 
