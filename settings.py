@@ -23,6 +23,9 @@ tab_items = [
     ("DEFAULTS", "Defaults", "Various node default values", custom_icon("SV_PREFS_DEVELOPER"), 2),
 ]
 
+_theme_collection = {}
+_current_theme = "default"
+
 def get_themes_path():
     """ create if it doesn't exist """
 
@@ -37,16 +40,18 @@ def get_themes_path():
 
     return themePath
 
+
 def get_theme_files_names():
     themePath = get_themes_path()
     themeFiles = os.path.join(themePath, "*.json")
     themeFileNames = [os.path.basename(x) for x in glob.glob(themeFiles)]
 
-    for themeFile in themeFileNames:
-        themeName = os.path.splitext(themeFile)[0]
-        print(themeName)
+    # for themeFile in themeFileNames:
+    #     themeName = os.path.splitext(themeFile)[0]
+    #     print(themeName)
 
     return themeFileNames
+
 
 def load_theme(fileName):
     print("loading theme: ", fileName)
@@ -56,88 +61,126 @@ def load_theme(fileName):
 
     return theme
 
-_theme_collection = {}
 
 def load_themes():
+    if _theme_collection:  # return if themes already loaded
+        return
+
+    print("loading the themes")
+
     themePath = get_themes_path()
     themeFileNames = get_theme_files_names()
-    themes = OrderedDict()
     print(themeFileNames)
+
+    themes = OrderedDict()
     for f in themeFileNames:
-        print("filename: ", f)
+        # print("filename: ", f)
         filePath = os.path.join(themePath, f)
-        print("filepath: ", filePath)
+        # print("filepath: ", filePath)
         theme = load_theme(filePath)
         fileName = os.path.splitext(f)[0]
         themes[fileName] = theme
 
-    print("themes = ", themes)
+    # print("themes = ", themes)
 
     for fileName, theme in themes.items():
-        # tn = [key for key in themes[name].keys()][0]
         print("Theme : ", fileName, " is called: ", theme["Name"])
 
     _theme_collection["main"] = themes
 
-# def create_default_themes():
-#     default_theme = {
-#         "Viz": (1, 0.3, 0),
-#         "Text": (0.5, 0.5, 1),
-#         "Scene": (0, 0.5, 0.2),
-#         "Layout": (0.674, 0.242, 0.363),
-#         "Generators": (0, 0.5, 0.5),
-#         "Generators Extended": (0.4, 0.7, 0.7),
-#         }
 
-#     nipon_blossom = {
-#         "Viz": (0.628488, 0.931008, 1.000000),
-#         "Text": (1.000000, 0.899344, 0.974251),
-#         "Scene": (0.904933, 1.000000, 0.883421),
-#         "Layout": (0.602957, 0.674000, 0.564277),
-#         "Generators": (0.92, 0.92, 0.92),
-#         "Generators Extended": (0.95, 0.95, 0.95),
-#         }
+def save_theme(theme, fileName):
+    '''
+        Save the given theme to disk
+    '''
+    print("save theme to:", fileName)
 
-#     settings = OrderedDict()
-#     theme = OrderedDict()
-#     nodeColors = OrderedDict()
-#     errorColors = OrderedDict()
-#     heatMapColors = OrderedDict()
+    themePath = get_themes_path()
+    themeFile = os.path.join(themePath, fileName)
+    print("filepath: ", themeFile)
+    with open(themeFile, 'w') as outfile:
+        json.dump(theme, outfile, indent=4, separators=(',', ':'))
 
-#     nodeColors["Viz"] = [1, 0.3, 0]
-#     nodeColors["Text"] = [0.5, 0.5, 1]
-#     nodeColors["Scene"] = [0, 0.5, 0.2]
-#     nodeColors["Layout"] = [0.674, 0.242, 0.363]
-#     nodeColors["Generators"] = [0, 0.5, 0.5]
-#     nodeColors["Generators Extended"] = [0.4, 0.7, 0.7]
 
-#     errorColors["Exception Color"] = [0.4, 0.7, 0.7]
-#     errorColors["No Data"] = [0.4, 0.7, 0.7]
+def save_default_themes():
+    '''
+        Save the default themes to disk
+    '''
+    theme1 = {
+        "Name": "Default",
 
-#     heatMapColors["Heat Map Cold"] = [0.4, 0.7, 0.7]
-#     heatMapColors["Heat Map Hot"] = [0.4, 0.7, 0.7]
+        "Node Colors":
+        {
+            "Visualizer": [1.0, 0.3, 0.0],
+            "Text": [0.5, 0.5, 1.0],
+            "Scene": [0.0, 0.5, 0.2],
+            "Layout": [0.674, 0.242, 0.363],
+            "Generators": [0.0, 0.5, 0.5],
+            "Generators Extended": [0.4, 0.7, 0.7]
+        },
 
-#     theme["Node Colors"] = nodeColors
-#     theme["Error Colors"] = errorColors
-#     theme["Heat Map Colors"] = heatMapColors
+        "Error Colors":
+        {
+            "Exception": [0.8, 0.0, 0.0],
+            "No Data": [1.0, 0.3, 0.0]
+        },
 
-#     settings["defaut"] = theme
+        "Heat Map Colors":
+        {
+            "Heat Map Cold": [1.0, 1.0, 1.0],
+            "Heat Map Hot": [0.8, 0.0, 0.0]
+        },
+    }
 
-def get_color(theme, group, name):
-  # print("get theme color for group")
-  # print(theme)
-  # print(group)
-  # print(name)
-  return theme[group][name]
+    theme2 = {
+        "Name": "Nipon Blossom",
+
+        "Node Colors":
+        {
+            "Visualizer": [0.628488, 0.931008, 1.000000],
+            "Text": [1.000000, 0.899344, 0.974251],
+            "Scene": [0.904933, 1.000000, 0.883421],
+            "Layout": [0.602957, 0.674000, 0.564277],
+            "Generators": [0.92, 0.92, 0.92],
+            "Generators Extended": [0.95, 0.95, 0.95],
+        },
+
+        "Error Colors":
+        {
+            "Exception": [0.8, 0.0, 0.0],
+            "No Data": [1.0, 0.3, 0.0],
+        },
+
+        "Heat Map Colors":
+        {
+            "Heat Map Cold": [1.0, 1.0, 1.0],
+            "Heat Map Hot": [0.8, 0.0, 0.0],
+        },
+    }
+
+    t1 = json.loads(json.dumps(theme1), object_pairs_hook=OrderedDict)
+    t2 = json.loads(json.dumps(theme2), object_pairs_hook=OrderedDict)
+
+    save_theme(t1, "default.json")
+    save_theme(t2, "nipon_blossom.json")
+
 
 def theme_color(group, name):
-    theme = _theme_collection["main"]["default"]
-    return get_color(theme, group, name)
+    '''
+        Return the color in curren theme for given group & name
+    '''
+    load_themes() # loads the theme if not already loaded
+
+    theme = _theme_collection["main"][_current_theme]
+    return theme[group][name]
+
 
 class SvAddThemePreset(bpy.types.Operator):
     """ Add theme preset """
     bl_idname = "node.sv_add_theme_preset"
     bl_label = "Save Theme Preset"
+
+    themeName = StringProperty()
 
     def execute(self, context):
         print('Adding Theme Preset')
@@ -146,12 +189,16 @@ class SvAddThemePreset(bpy.types.Operator):
         # pprint(sv_node_cats["Generators"])
         # print(self.color_viz)
         # get_theme_files_names()
-        load_themes()
-        color_viz = theme_color("Node Colors", "Visualizer")
-        print("colorviz: ", color_viz)
-
+        # load_themes()
+        # color_viz = theme_color("Node Colors", "Visualizer")
+        # print("colorviz: ", color_viz)
+        _current_theme = themeName
+        for name in ["Visualizer", "Text", "Scene", "Layout", "Scene", "Generators", "Generators Extended"]:
+            color = theme_color("Node Colors", name)
+            print("Color for: ", name, " is : ", color)
 
         return {'FINISHED'}
+
 
 class SvRemoveThemePreset(bpy.types.Operator):
     """ Remove theme preset """
@@ -419,7 +466,6 @@ class SverchokPreferences(AddonPreferences):
         name="Centering ON", description="Set centering to ON in various nodes",
         default=False)
 
-
     def split_columns(self, panel, sizes):
         col2 = panel
         cols = []
@@ -481,7 +527,7 @@ class SverchokPreferences(AddonPreferences):
 
         row = colB.row(align=True)
         row.prop(self, 'sv_theme')
-        row.operator("node.sv_add_theme_preset", text="", icon='ZOOMIN')
+        row.operator("node.sv_add_theme_preset", text="", icon='ZOOMIN').themeName = self.sv_theme
         row.operator("node.sv_remove_theme_preset", text="", icon='ZOOMOUT')
 
         colB1, colB2 = self.split_columns(colB, [1, 1])
@@ -565,9 +611,12 @@ class SverchokPreferences(AddonPreferences):
 
 
 def register():
+    save_default_themes()
+
     bpy.utils.register_class(SverchokPreferences)
     bpy.utils.register_class(SvAddThemePreset)
     bpy.utils.register_class(SvRemoveThemePreset)
+
 
 def unregister():
     bpy.utils.unregister_class(SverchokPreferences)
