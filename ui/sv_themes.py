@@ -22,6 +22,7 @@ from bpy.props import StringProperty
 
 from collections import OrderedDict
 
+import re
 import os
 import json
 import glob
@@ -64,8 +65,7 @@ def get_themes_path():
     '''
         Get the themes path. Create one first if it doesn't exist.
     '''
-    dirPath = os.path.join(bpy.utils.user_resource(
-        'DATAFILES', path='sverchok', create=True))
+    dirPath = os.path.join(bpy.utils.user_resource('DATAFILES', path='sverchok', create=True))
     themePath = os.path.join(dirPath, 'themes')
 
     # create theme path if it doesn't exist
@@ -137,6 +137,72 @@ def save_theme(theme, fileName):
 
 
 def save_default_themes():
+    # DEFAULT theme
+    themeName = "Default"
+
+    theme = OrderedDict()
+    nodeColors = OrderedDict()
+    errorColors = OrderedDict()
+    heatMapColors = OrderedDict()
+
+    theme["Name"] = themeName
+
+    nodeColors["Visualizer"] = [1.0, 0.3, 0.0]
+    nodeColors["Text"] = [1.0, 0.3, 0.0]
+    nodeColors["Scene"] = [0.0, 0.5, 0.2]
+    nodeColors["Layout"] = [0.674, 0.242, 0.363]
+    nodeColors["Generators"] = [0.0, 0.5, 0.5]
+    nodeColors["Generators Extended"] = [0.4, 0.7, 0.7]
+
+    errorColors["Exception Color"] = [0.8, 0.0, 0.0]
+    errorColors["No Data"] = [1.0, 0.3, 0.0]
+
+    heatMapColors["Heat Map Cold"] = [1.0, 1.0, 1.0]
+    heatMapColors["Heat Map Hot"] = [0.8, 0.0, 0.0]
+
+    theme["Node Colors"] = nodeColors
+    theme["Error Colors"] = errorColors
+    theme["Heat Map Colors"] = heatMapColors
+
+    themeFileName = re.sub(r'[ ]', '_', themeName.lower()) + ".json"
+
+    save_theme(theme, themeFileName)
+
+    # NIPON-BLOSSOM theme
+    themeName = "Nipon Blossom"
+
+    theme = OrderedDict()
+    nodeColors = OrderedDict()
+    errorColors = OrderedDict()
+    heatMapColors = OrderedDict()
+
+    theme["Name"] = themeName
+
+    nodeColors["Visualizer"] = [0.628488, 0.931008, 1.000000]
+    nodeColors["Text"] = [1.000000, 0.899344, 0.974251]
+    nodeColors["Scene"] = [0.904933, 1.000000, 0.883421]
+    nodeColors["Layout"] = [0.602957, 0.674000, 0.564277]
+    nodeColors["Generators"] = [0.92, 0.92, 0.92]
+    nodeColors["Generators Extended"] = [0.95, 0.95, 0.95]
+
+    errorColors["Exception Color"] = [0.8, 0.0, 0.0]
+    errorColors["No Data"] = [1.0, 0.3, 0.0]
+
+    heatMapColors["Heat Map Cold"] = [1.0, 1.0, 1.0]
+    heatMapColors["Heat Map Hot"] = [0.8, 0.0, 0.0]
+
+    theme["Node Colors"] = nodeColors
+    theme["Error Colors"] = errorColors
+    theme["Heat Map Colors"] = heatMapColors
+
+    themeFileName = re.sub(r'[ ]', '_', themeName.lower()) + ".json"
+
+    # print("save theme with filename: ", fileName)
+
+    save_theme(theme, themeFileName)
+
+
+def save_default_themes2():
     '''
         Save the default themes to disk
     '''
@@ -146,7 +212,7 @@ def save_default_themes():
         "Node Colors":
         {
             "Visualizer": [1.0, 0.3, 0.0],
-            "Text": [0.5, 0.5, 1.0],
+            "Text": [1.0, 0.3, 0.0],
             "Scene": [0.0, 0.5, 0.2],
             "Layout": [0.674, 0.242, 0.363],
             "Generators": [0.0, 0.5, 0.5],
@@ -236,6 +302,7 @@ def get_node_color(nodeID):
 
 
 class SvAddRemoveTheme(bpy.types.Operator):
+
     '''
         Add current settings as new theme or remove currently selected theme.
         Note: it doesn't work on hardcoded themes: default, nippon_blossom
@@ -248,8 +315,6 @@ class SvAddRemoveTheme(bpy.types.Operator):
     behaviour = StringProperty(default='')
 
     def add_theme(self):
-        # prefs = sv_preferences()
-
         print("add_theme in action")
 
         with sv_preferences() as prefs:
@@ -273,7 +338,7 @@ class SvAddRemoveTheme(bpy.types.Operator):
             errorColors["No Data"] = prefs.no_data_color[:]
 
             heatMapColors["Heat Map Cold"] = prefs.heat_map_cold[:]
-            heatMapColors["Heat Map Hot"] = prefs.heat_map_cold[:]
+            heatMapColors["Heat Map Hot"] = prefs.heat_map_hot[:]
 
             theme["Node Colors"] = nodeColors
             theme["Error Colors"] = errorColors
