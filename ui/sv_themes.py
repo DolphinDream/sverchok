@@ -35,28 +35,28 @@ from sverchok.utils.context_managers import sv_preferences
 _category_node_list = {}
 _theme_collection = OrderedDict()
 _current_theme = "default"
-_theme_list = []
+_theme_preset_list = []
 
 
-def get_theme_list():
-    # print("get the theme list")
-    return _theme_list
+def get_theme_preset_list():
+    # print("get the theme preset list")
+    return _theme_preset_list
 
 
-def update_theme_list():
+def update_theme_preset_list():
     # load_themes()
 
-    _theme_list.clear()
+    _theme_preset_list.clear()
     for name, theme in _theme_collection.items():
         themeName = theme["Name"]
         print("file name = ", name)
         print("theme name = ", themeName)
         themeItem = (name, themeName, themeName)
-        _theme_list.append(themeItem)
+        _theme_preset_list.append(themeItem)
 
 
 def cache_category_node_list():
-    """ Cache category-node list for color access. """
+    """ Cache the category-node list for color access. """
     if _category_node_list:
         return
 

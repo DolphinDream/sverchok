@@ -53,7 +53,7 @@ class SverchokPreferences(AddonPreferences):
         self.load_theme_values()
 
     def themePresetItems(self, context):
-        themeItems = sv_themes.get_theme_list()
+        themeItems = sv_themes.get_theme_preset_list()
         return themeItems
 
     #  debugish...
