@@ -423,15 +423,13 @@ class SvAddRemoveTheme(bpy.types.Operator):
     def invoke(self, context, event):
         if self.behaviour == 'add':
             print("invoke to add preset")
-            self.name = "unamed"
+            self.name = "Unamed Theme"
             self.overwrite = False
             wm = context.window_manager
             return wm.invoke_props_dialog(self)
-            # print("invoke result = ", result)
-            # return result
-            # return {'PASS_THROUGH'}
         elif self.behaviour == 'remove':
             print("invoke to remove preset")
+            self.name = _current_theme
             self.remove_confirm = False
             wm = context.window_manager
             return wm.invoke_props_dialog(self)
