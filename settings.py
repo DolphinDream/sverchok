@@ -17,22 +17,19 @@ tab_items = [
     ("DEFAULTS", "Defaults", "Various node default values", custom_icon("SV_PREFS_DEVELOPER"), 2),
 ]
 
-# themeItems = [("default", "Default", "Default"),
-#               ("nipon_blossom", "Nipon Blossom", "Nipon Blossom"),
-#               ("dolphin_dream", "Dolphin Dream", "Dolphin Dream")]
-
 class SverchokPreferences(AddonPreferences):
 
     bl_idname = __package__
 
     def select_theme(self, context):
-        print("selecting theme: ", self.sv_theme)
+        print("selecting theme: ", self.current_theme)
         # color_def.color_callback(self, context)
-        # self.load_theme_values(self.sv_theme)
+        # self.load_theme_values(self.current_theme)
         # get_theme_files_names()
-        sv_themes.set_current_theme(self.sv_theme)
+        sv_themes.select_current_theme(self.current_theme)
         sv_themes.update_colors()
-        sv_themes.apply_theme()
+        if self.auto_apply_theme:
+            sv_themes.apply_theme()
 
 
     def update_debug_mode(self, context):
@@ -96,7 +93,7 @@ class SverchokPreferences(AddonPreferences):
         default=(1, 1, 1), subtype='COLOR')
 
     #  theme settings
-    sv_theme = EnumProperty(
+    current_theme = EnumProperty(
         # items=themeItems,
         items=themePresetItems,
         name="Theme preset",
@@ -287,7 +284,7 @@ class SverchokPreferences(AddonPreferences):
         box.prop(self, "enable_icon_manager")
 
         row = colB.row(align=True)
-        row.prop(self, 'sv_theme')
+        row.prop(self, 'current_theme')
         row.operator("node.sv_add_remove_theme", text="", icon='ZOOMIN').behaviour = "add"
         row.operator("node.sv_add_remove_theme", text="", icon='ZOOMOUT').behaviour = "remove"
 

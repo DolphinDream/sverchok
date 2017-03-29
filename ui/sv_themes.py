@@ -37,11 +37,6 @@ _theme_collection = OrderedDict()
 _current_theme = "default"
 _theme_list = []
 
-themeItems = [("default", "Default", "Default"),
-              ("nipon_blossom", "Nipon Blossom", "Nipon Blossom"),
-              ("dragon_turd", "Dragon Turd", "Dragon Turd")]
-# ("dolphin_dream", "Dolphin Dream", "Dolphin Dream")]
-
 
 def get_theme_list():
     # print("get the theme list")
@@ -126,7 +121,6 @@ def load_themes(reload=False):
         theme = load_theme(f)
         fileName = os.path.splitext(os.path.basename(f))[0]
         print("filename : ", fileName)
-        # fileName = os.path.splitext(f)[0]
         _theme_collection[fileName] = theme
 
     for fileName, theme in _theme_collection.items():
@@ -144,8 +138,6 @@ def save_theme(theme, fileName):
     print("filepath: ", themeFile)
     with open(themeFile, 'w') as outfile:
         json.dump(theme, outfile, indent=4, separators=(',', ':'))
-
-    # update_theme_list()
 
 
 def save_default_themes():
@@ -238,8 +230,6 @@ def remove_theme(themeName):
         print("failed to remove theme file: ", themeFile)
         pass
 
-    # update_theme_list()
-
 
 def get_current_theme():
     """ Get the currently selected theme """
@@ -248,9 +238,9 @@ def get_current_theme():
     return _theme_collection[_current_theme]  # @todo check if name exists
 
 
-def set_current_theme(themeName):
+def select_current_theme(themeName):
     global _current_theme
-    print("setting current theme to:", themeName)
+    print("selecting current theme to:", themeName)
     _current_theme = themeName
 
 
@@ -297,6 +287,7 @@ def apply_theme(ng=None):
         for n in filter(lambda n: hasattr(n, "set_color"), ng.nodes):
             n.set_color()
 
+
 def update_colors():
     with sv_preferences() as prefs:
         prefs.color_viz = theme_color("Node Colors", "Visualizer")
@@ -327,7 +318,7 @@ class SvApplyTheme(bpy.types.Operator):
     def execute(self, context):
         global _current_theme
         with sv_preferences() as prefs:
-            _current_theme = prefs.sv_theme
+            _current_theme = prefs.current_theme
 
         print("applying sverchok theme: ", _current_theme)
         if self.tree_name:
@@ -395,9 +386,8 @@ class SvAddRemoveTheme(bpy.types.Operator):
 
     def update_theme_list(self):
         print("update_theme_list in action")
-        load_themes(True) # force reload themes
+        load_themes(True)  # force reload themes
         update_theme_list()
-
 
     def execute(self, context):
         themeName = "Dolphin Dream"
@@ -406,13 +396,13 @@ class SvAddRemoveTheme(bpy.types.Operator):
             self.update_theme_list()
             with sv_preferences() as prefs:
                 themeFileBase = re.sub(r'[ ]', '_', themeName.lower())
-                prefs.sv_theme = themeFileBase
+                prefs.current_theme = themeFileBase
 
         elif self.behaviour == 'remove':
             self.remove_theme(themeName)
             self.update_theme_list()
             with sv_preferences() as prefs:
-                prefs.sv_theme = "default"
+                prefs.current_theme = "default"
         else:
             print("Warning: invalid add/remove theme behavior")
 
