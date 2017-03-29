@@ -35,12 +35,21 @@ from sverchok.utils.context_managers import sv_preferences
 _category_node_list = {}
 _theme_collection = OrderedDict()
 _current_theme = "default"
+_theme_list = []
+
+themeItems = [("default", "Default", "Default"),
+              ("nipon_blossom", "Nipon Blossom", "Nipon Blossom"),
+              ("dragon_turd", "Dragon Turd", "Dragon Turd")]
+# ("dolphin_dream", "Dolphin Dream", "Dolphin Dream")]
+
+
+def get_theme_list():
+    print("get the theme list")
+    return _theme_list
 
 
 def cache_category_node_list():
-    '''
-        Cache category-node list for color access.
-    '''
+    """ Cache category-node list for color access. """
     if _category_node_list:
         return
 
@@ -54,17 +63,13 @@ def cache_category_node_list():
 
 
 def get_node_category(nodeID):
-    '''
-        Get the note category for the given node ID
-    '''
+    """ Get the note category for the given node ID """
     cache_category_node_list()  # make sure the category-node list is cached
     return _category_node_list[nodeID]  # @todo check if nodeID is in list
 
 
 def get_themes_path():
-    '''
-        Get the themes path. Create one first if it doesn't exist.
-    '''
+    """ Get the themes path. Create one first if it doesn't exist """
     dirPath = os.path.join(bpy.utils.user_resource('DATAFILES', path='sverchok', create=True))
     themePath = os.path.join(dirPath, 'themes')
 
@@ -76,9 +81,7 @@ def get_themes_path():
 
 
 def get_theme_files():
-    '''
-        Get the theme files for all the themes present at the themes path
-    '''
+    """ Get the theme files for all the themes present at the themes path """
     themePath = get_themes_path()
     themeFilePattern = os.path.join(themePath, "*.json")
     themeFiles = glob.glob(themeFilePattern)
@@ -87,9 +90,7 @@ def get_theme_files():
 
 
 def load_theme(filePath):
-    '''
-        Load a theme from the given file path
-    '''
+    """ Load a theme from the given file path """
     print("loading theme: ", filePath)
     theme = {}
     with open(filePath, 'r') as infile:
@@ -98,11 +99,10 @@ def load_theme(filePath):
     return theme
 
 
-def load_themes():
-    '''
-        Load all the themes from disk into a cache
-    '''
-    if _theme_collection:  # return if the themes are already loaded
+def load_themes(reload=False):
+    """ Load all the themes from disk into a cache """
+    # return if the themes are already loaded
+    if _theme_collection and not reload:
         return
 
     print("Loading the themes...")
@@ -124,9 +124,7 @@ def load_themes():
 
 
 def save_theme(theme, fileName):
-    '''
-        Save the given theme to disk
-    '''
+    """ Save the given theme to disk """
     print("save theme to:", fileName)
 
     themePath = get_themes_path()
@@ -137,6 +135,8 @@ def save_theme(theme, fileName):
 
 
 def save_default_themes():
+    """ Save the hardcoded default themes to disk """
+
     # DEFAULT theme
     themeName = "Default"
 
@@ -202,28 +202,34 @@ def save_default_themes():
     save_theme(theme, themeFileName)
 
 
+def remove_theme(themeName):
+    """ Remove theme from theme collection and disk """
+
+    print("Removing the theme with name: ", themeName)
+    if themeName in _theme_collection:
+        print("Found theme <", themeName, "> to remove")
+    else:
+        print("NOT Found theme <", themeName, "> to remove")
+
+
 def get_current_theme():
-    '''
-        Get the currently selected theme
-    '''
+    """ Get the currently selected theme """
     load_themes()  # make sure the themes are loaded
     return _theme_collection[_current_theme]  # @todo check if name exists
 
 
 def theme_color(group, category):
-    '''
-        Return the color in the current theme for the given group & category
-        Groups : "Node Colors", "Error Colors", "Heat Map Colors" etc
-        Category : "Visualizer", "Text", "Generators" etc
-    '''
+    """
+    Return the color in the current theme for the given group & category
+    Groups : "Node Colors", "Error Colors", "Heat Map Colors" etc
+    Category : "Visualizer", "Text", "Generators" etc
+    """
     theme = get_current_theme()
     return theme[group][category]
 
 
 def get_node_color(nodeID):
-    '''
-        Return the theme color of a node given its node ID
-    '''
+    """ Return the theme color of a node given its node ID """
     theme = get_current_theme()
     print("Current theme name: ", theme["Name"])
 
@@ -246,9 +252,7 @@ def sverchok_trees():
 
 
 def apply_theme(ng=None):
-    """
-    Apply theme colors
-    """
+    """ Apply theme colors """
     print("apply theme called")
     if not ng:
         for ng in sverchok_trees():
@@ -260,9 +264,7 @@ def apply_theme(ng=None):
 
 class SvApplyTheme(bpy.types.Operator):
 
-    """
-    Apply Sverchok theme
-    """
+    """ Apply Sverchok theme  """
     bl_idname = "node.sverchok_apply_theme2"
     bl_label = "Sverchok Apply theme"
     bl_options = {'REGISTER', 'UNDO'}
@@ -287,11 +289,10 @@ class SvApplyTheme(bpy.types.Operator):
 
 class SvAddRemoveTheme(bpy.types.Operator):
 
-    '''
-        Add current settings as new theme or remove currently selected theme.
-        Note: it doesn't work on hardcoded themes: default, nippon_blossom
-    '''
-
+    """
+    Add current settings as new theme or remove currently selected theme.
+    Note: it doesn't work on hardcoded themes: default, nippon_blossom
+    """
     bl_idname = "node.sv_add_remove_theme"
     bl_label = "Add Remove Theme"
 
@@ -333,6 +334,21 @@ class SvAddRemoveTheme(bpy.types.Operator):
 
     def remove_theme(self):
         print("remove_theme in action")
+        with sv_preferences() as prefs:
+            themeName = prefs.sv_theme
+            remove_theme(themeName)
+
+    def update_theme_list(self):
+        print("update_theme_list in action")
+        load_themes(True)  # force reload
+
+        _theme_list.clear()
+        for name, theme in _theme_collection.items():
+            themeName = theme["Name"]
+            print("file name = ", name)
+            print("theme name = ", themeName)
+            themeItem = (name, themeName, themeName)
+            _theme_list.append(themeItem)
 
     def execute(self, context):
         if self.behaviour == 'add':
@@ -341,6 +357,8 @@ class SvAddRemoveTheme(bpy.types.Operator):
             self.remove_theme()
         else:
             print("Warning: invalid add/remove theme behavior")
+
+        self.update_theme_list()
 
         return {'FINISHED'}
 

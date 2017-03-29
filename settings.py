@@ -17,6 +17,9 @@ tab_items = [
     ("DEFAULTS", "Defaults", "Various node default values", custom_icon("SV_PREFS_DEVELOPER"), 2),
 ]
 
+# themeItems = [("default", "Default", "Default"),
+#               ("nipon_blossom", "Nipon Blossom", "Nipon Blossom"),
+#               ("dolphin_dream", "Dolphin Dream", "Dolphin Dream")]
 
 class SverchokPreferences(AddonPreferences):
 
@@ -47,6 +50,10 @@ class SverchokPreferences(AddonPreferences):
     def update_defaults(self, context):
         print("Update Defaults")
         self.load_theme_values()
+
+    def themePresetItems(self, context):
+        themeItems = sv_themes.get_theme_list()
+        return themeItems
 
     #  debugish...
     show_debug = BoolProperty(
@@ -89,11 +96,11 @@ class SverchokPreferences(AddonPreferences):
                   ("nipon_blossom", "Nipon Blossom", "Nipon Blossom")]
 
     sv_theme = EnumProperty(
-        items=themeItems,
+        # items=themeItems,
+        items=themePresetItems,
         name="Theme preset",
         description="Select a theme preset",
-        update=select_theme,
-        default="default")
+        update=select_theme)
 
     auto_apply_theme = BoolProperty(
         name="Apply theme", description="Apply theme automatically",
