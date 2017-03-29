@@ -28,6 +28,7 @@ class SverchokPreferences(AddonPreferences):
         # get_theme_files_names()
         sv_themes.select_current_theme(self.current_theme)
         sv_themes.update_colors()
+
         if self.auto_apply_theme:
             sv_themes.apply_theme()
 
@@ -148,7 +149,7 @@ class SverchokPreferences(AddonPreferences):
         default=(0, 0.5, 0.5), subtype='COLOR',
         update=update_theme)
 
-    color_genx = FloatVectorProperty(
+    color_gex = FloatVectorProperty(
         name="Generator X", description='',
         size=3, min=0.0, max=1.0,
         default=(0.4, 0.7, 0.7), subtype='COLOR',
@@ -276,6 +277,8 @@ class SverchokPreferences(AddonPreferences):
         box.prop(self, 'apply_theme_on_open', text="Apply theme when opening file")
         box.separator()
         box.operator('node.sverchok_apply_theme2', text="Apply theme to layouts")
+        box.separator()
+        box.operator('node.enter_theme_name')
 
         colA.label(text="UI settings:")
         box = colA.box()
@@ -292,7 +295,7 @@ class SverchokPreferences(AddonPreferences):
 
         colB1.label("Nodes Colors:")
         box = colB1.box()
-        for name in ['color_viz', 'color_tex', 'color_sce', 'color_lay', 'color_gen', 'color_genx']:
+        for name in ['color_viz', 'color_tex', 'color_sce', 'color_lay', 'color_gen', 'color_gex']:
             row = box.row()
             row.prop(self, name)
 

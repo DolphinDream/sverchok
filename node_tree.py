@@ -440,7 +440,6 @@ class SverchCustomTreeNode:
 
     def set_color(self):
         # color = color_def.get_color(self.bl_idname)
-        # color = color_def.get_color(self.bl_idname)
         color = sv_themes.get_node_color(self.bl_idname)
         if color:
             self.use_custom_color = True

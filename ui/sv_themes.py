@@ -18,15 +18,14 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
-from bpy.props import StringProperty
-
-from collections import OrderedDict
+from bpy.props import StringProperty, BoolProperty
 
 import re
 import os
 import json
 import glob
 from pprint import pprint
+from collections import OrderedDict
 
 import sverchok
 from sverchok.menu import make_node_cats
@@ -39,13 +38,16 @@ _theme_preset_list = []
 
 
 def get_theme_preset_list():
+    """ Get the theme preset list (used for enum property) """
     # print("get the theme preset list")
     return _theme_preset_list
 
 
-def update_theme_preset_list():
-    # load_themes()
-
+def cache_theme_preset_list():
+    """ Cache the theme preset list (triggered after add/remove theme preset)"""
+    # print("cache theme preset lists")
+    # print("theme preset list = ", _theme_preset_list)
+    # print("theme collection = ", _theme_collection)
     _theme_preset_list.clear()
     for name, theme in _theme_collection.items():
         themeName = theme["Name"]
@@ -56,7 +58,7 @@ def update_theme_preset_list():
 
 
 def cache_category_node_list():
-    """ Cache the category-node list for color access. """
+    """ Cache the category-node mapping (used for color access) """
     if _category_node_list:
         return
 
@@ -66,11 +68,11 @@ def cache_category_node_list():
         for node in nodes:
             _category_node_list[node[0]] = category
 
-    # print("category node list = ", _category_node_list)
+    print("category node list = ", _category_node_list)
 
 
 def get_node_category(nodeID):
-    """ Get the note category for the given node ID """
+    """ Get the node category for the given node ID """
     cache_category_node_list()  # make sure the category-node list is cached
     return _category_node_list[nodeID]  # @todo check if nodeID is in list
 
@@ -126,7 +128,7 @@ def load_themes(reload=False):
     for fileName, theme in _theme_collection.items():
         print("Theme : ", fileName, " is called: ", theme["Name"])
 
-    print("Loaded theme collection: ", _theme_collection)
+    # print("Loaded theme collection: ", _theme_collection)
 
 
 def save_theme(theme, fileName):
@@ -271,6 +273,22 @@ def get_node_color(nodeID):
         print("Category: ", nodeCategory, " NOT found in the theme")
 
 
+def update_colors():
+    with sv_preferences() as prefs:
+        prefs.color_viz = theme_color("Node Colors", "Visualizer")
+        prefs.color_tex = theme_color("Node Colors", "Text")
+        prefs.color_sce = theme_color("Node Colors", "Scene")
+        prefs.color_lay = theme_color("Node Colors", "Layout")
+        prefs.color_gen = theme_color("Node Colors", "Generators")
+        prefs.color_gex = theme_color("Node Colors", "Generators Extended")
+
+        prefs.exception_color = theme_color("Error Colors", "Exception")
+        prefs.no_data_color = theme_color("Error Colors", "No Data")
+
+        prefs.heat_map_cold = theme_color("Heat Map Colors", "Heat Map Cold")
+        prefs.heat_map_hot = theme_color("Heat Map Colors", "Heat Map Hot")
+
+
 def sverchok_trees():
     for ng in bpy.data.node_groups:
         if ng.bl_idname == "SverchCustomTreeType":
@@ -286,22 +304,6 @@ def apply_theme(ng=None):
     else:
         for n in filter(lambda n: hasattr(n, "set_color"), ng.nodes):
             n.set_color()
-
-
-def update_colors():
-    with sv_preferences() as prefs:
-        prefs.color_viz = theme_color("Node Colors", "Visualizer")
-        prefs.color_tex = theme_color("Node Colors", "Text")
-        prefs.color_sce = theme_color("Node Colors", "Scene")
-        prefs.color_lay = theme_color("Node Colors", "Layout")
-        prefs.color_gen = theme_color("Node Colors", "Generators")
-        prefs.color_genx = theme_color("Node Colors", "Generators Extended")
-
-        prefs.exception_color = theme_color("Error Colors", "Exception")
-        prefs.no_data_color = theme_color("Error Colors", "No Data")
-
-        prefs.heat_map_cold = theme_color("Heat Map Colors", "Heat Map Cold")
-        prefs.heat_map_hot = theme_color("Heat Map Colors", "Heat Map Hot")
 
 
 class SvApplyTheme(bpy.types.Operator):
@@ -341,10 +343,15 @@ class SvAddRemoveTheme(bpy.types.Operator):
     bl_idname = "node.sv_add_remove_theme"
     bl_label = "Add Remove Theme"
 
+    name = StringProperty(name="Name:")
+    overwrite = BoolProperty(name="Overwrite")
+    remove_confirm = BoolProperty(name="Confirm Remove")
     behaviour = StringProperty(default='')
 
+    # name = StringProperty(default='')
+
     def add_theme(self, themeName):
-        print("add_theme in action")
+        print("add_theme in action: ", self.name)
 
         with sv_preferences() as prefs:
 
@@ -360,7 +367,7 @@ class SvAddRemoveTheme(bpy.types.Operator):
             nodeColors["Scene"] = prefs.color_sce[:]
             nodeColors["Layout"] = prefs.color_lay[:]
             nodeColors["Generators"] = prefs.color_gen[:]
-            nodeColors["Generators Extended"] = prefs.color_genx[:]
+            nodeColors["Generators Extended"] = prefs.color_gex[:]
 
             errorColors["Exception"] = prefs.exception_color[:]
             errorColors["No Data"] = prefs.no_data_color[:]
@@ -387,35 +394,92 @@ class SvAddRemoveTheme(bpy.types.Operator):
     def update_theme_list(self):
         print("update_theme_list in action")
         load_themes(True)  # force reload themes
-        update_theme_list()
+        cache_theme_preset_list()
 
     def execute(self, context):
-        themeName = "Dolphin Dream"
-        if self.behaviour == 'add':
-            self.add_theme(themeName)
-            self.update_theme_list()
-            with sv_preferences() as prefs:
+        print("Executing the add/remove preset operator")
+        themeName = self.name
+        # themeName = "Dolphin Dream"
+        with sv_preferences() as prefs:
+
+            if self.behaviour == 'add':
+                self.add_theme(themeName)
+                self.update_theme_list()
                 themeFileBase = re.sub(r'[ ]', '_', themeName.lower())
                 prefs.current_theme = themeFileBase
 
-        elif self.behaviour == 'remove':
-            self.remove_theme(themeName)
-            self.update_theme_list()
-            with sv_preferences() as prefs:
-                prefs.current_theme = "default"
-        else:
-            print("Warning: invalid add/remove theme behavior")
+            elif self.behaviour == 'remove':
+                if prefs.current_theme in ['default', 'nipon_blossom']:
+                    self.report({'WARNING'}, "Cannot remove default themes!")
+                else:
+                    self.remove_theme(themeName)
+                    self.update_theme_list()
+                    prefs.current_theme = "default"
+            else:
+                print("Warning: invalid add/remove theme behavior")
 
         return {'FINISHED'}
 
+    def invoke(self, context, event):
+        if self.behaviour == 'add':
+            print("invoke to add preset")
+            self.name = "unamed"
+            self.overwrite = False
+            wm = context.window_manager
+            return wm.invoke_props_dialog(self)
+            # print("invoke result = ", result)
+            # return result
+            # return {'PASS_THROUGH'}
+        elif self.behaviour == 'remove':
+            print("invoke to remove preset")
+            self.remove_confirm = False
+            wm = context.window_manager
+            return wm.invoke_props_dialog(self)
+            # return self.execute(context)
+        else:
+            print("Warning: invalid add/remove theme behavior")
+            return {'FINISHED'}
+
+    def draw(self, context):
+        layout = self.layout
+        if self.behaviour == 'add':
+            layout.prop(self, 'name')
+            layout.prop(self, 'overwrite')
+        elif self.behaviour == 'remove':
+            layout.label('Are you sure you want to remove current theme?')
+            layout.prop(self, 'remove_confirm')
+
+class EnterThemeName(bpy.types.Operator):
+    bl_idname = "node.enter_theme_name"
+    bl_label = "Enter Theme Name"
+
+    name = bpy.props.StringProperty(name="Name:")
+    overwrite = bpy.props.BoolProperty(name="Overwrite")
+
+    def execute(self, context):
+        message = "%s, %d" % (self.name, self.overwrite)
+        self.report({'INFO'}, message)
+        print("message=", message)
+
+        bpy.ops.node.sv_add_remove_theme('EXEC_DEFAULT', behaviour="add", name=self.name)
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
 
 def register():
     save_default_themes()
+    load_themes()
+    cache_theme_preset_list()
+
+    bpy.utils.register_class(EnterThemeName)
     bpy.utils.register_class(SvAddRemoveTheme)
     bpy.utils.register_class(SvApplyTheme)
 
 
 def unregister():
+    bpy.utils.unregister_class(EnterThemeName)
     bpy.utils.unregister_class(SvAddRemoveTheme)
     bpy.utils.unregister_class(SvApplyTheme)
 
