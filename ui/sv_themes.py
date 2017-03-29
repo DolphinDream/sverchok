@@ -44,8 +44,20 @@ themeItems = [("default", "Default", "Default"),
 
 
 def get_theme_list():
-    print("get the theme list")
+    # print("get the theme list")
     return _theme_list
+
+
+def update_theme_list():
+    # load_themes()
+
+    _theme_list.clear()
+    for name, theme in _theme_collection.items():
+        themeName = theme["Name"]
+        print("file name = ", name)
+        print("theme name = ", themeName)
+        themeItem = (name, themeName, themeName)
+        _theme_list.append(themeItem)
 
 
 def cache_category_node_list():
@@ -133,6 +145,8 @@ def save_theme(theme, fileName):
     with open(themeFile, 'w') as outfile:
         json.dump(theme, outfile, indent=4, separators=(',', ':'))
 
+    # update_theme_list()
+
 
 def save_default_themes():
     """ Save the hardcoded default themes to disk """
@@ -154,7 +168,7 @@ def save_default_themes():
     nodeColors["Generators"] = [0.0, 0.5, 0.5]
     nodeColors["Generators Extended"] = [0.4, 0.7, 0.7]
 
-    errorColors["Exception Color"] = [0.8, 0.0, 0.0]
+    errorColors["Exception"] = [0.8, 0.0, 0.0]
     errorColors["No Data"] = [1.0, 0.3, 0.0]
 
     heatMapColors["Heat Map Cold"] = [1.0, 1.0, 1.0]
@@ -185,7 +199,7 @@ def save_default_themes():
     nodeColors["Generators"] = [0.92, 0.92, 0.92]
     nodeColors["Generators Extended"] = [0.95, 0.95, 0.95]
 
-    errorColors["Exception Color"] = [0.8, 0.0, 0.0]
+    errorColors["Exception"] = [0.8, 0.0, 0.0]
     errorColors["No Data"] = [1.0, 0.3, 0.0]
 
     heatMapColors["Heat Map Cold"] = [1.0, 1.0, 1.0]
@@ -205,17 +219,39 @@ def save_default_themes():
 def remove_theme(themeName):
     """ Remove theme from theme collection and disk """
 
+    if themeName in ['default', 'nipon_blossom']:
+        print("Cannot remove the default themes")
+        return
+
     print("Removing the theme with name: ", themeName)
     if themeName in _theme_collection:
         print("Found theme <", themeName, "> to remove")
+        del _theme_collection[themeName]
     else:
         print("NOT Found theme <", themeName, "> to remove")
+
+    themePath = get_themes_path()
+    themeFile = os.path.join(themePath, themeName + ".json")
+    try:
+        os.remove(themeFile)
+    except OSError:
+        print("failed to remove theme file: ", themeFile)
+        pass
+
+    # update_theme_list()
 
 
 def get_current_theme():
     """ Get the currently selected theme """
     load_themes()  # make sure the themes are loaded
+    print("getting the current theme for: ", _current_theme)
     return _theme_collection[_current_theme]  # @todo check if name exists
+
+
+def set_current_theme(themeName):
+    global _current_theme
+    print("setting current theme to:", themeName)
+    _current_theme = themeName
 
 
 def theme_color(group, category):
@@ -231,7 +267,7 @@ def theme_color(group, category):
 def get_node_color(nodeID):
     """ Return the theme color of a node given its node ID """
     theme = get_current_theme()
-    print("Current theme name: ", theme["Name"])
+    print("Get node color for current theme name: ", theme["Name"])
 
     nodeCategory = get_node_category(nodeID)
     print("NodeID: ", nodeID, " is in category:", nodeCategory)
@@ -261,10 +297,27 @@ def apply_theme(ng=None):
         for n in filter(lambda n: hasattr(n, "set_color"), ng.nodes):
             n.set_color()
 
+def update_colors():
+    with sv_preferences() as prefs:
+        prefs.color_viz = theme_color("Node Colors", "Visualizer")
+        prefs.color_tex = theme_color("Node Colors", "Text")
+        prefs.color_sce = theme_color("Node Colors", "Scene")
+        prefs.color_lay = theme_color("Node Colors", "Layout")
+        prefs.color_gen = theme_color("Node Colors", "Generators")
+        prefs.color_genx = theme_color("Node Colors", "Generators Extended")
+
+        prefs.exception_color = theme_color("Error Colors", "Exception")
+        prefs.no_data_color = theme_color("Error Colors", "No Data")
+
+        prefs.heat_map_cold = theme_color("Heat Map Colors", "Heat Map Cold")
+        prefs.heat_map_hot = theme_color("Heat Map Colors", "Heat Map Hot")
+
 
 class SvApplyTheme(bpy.types.Operator):
 
-    """ Apply Sverchok theme  """
+    """
+    Apply Sverchok theme
+    """
     bl_idname = "node.sverchok_apply_theme2"
     bl_label = "Sverchok Apply theme"
     bl_options = {'REGISTER', 'UNDO'}
@@ -272,6 +325,7 @@ class SvApplyTheme(bpy.types.Operator):
     tree_name = StringProperty()
 
     def execute(self, context):
+        global _current_theme
         with sv_preferences() as prefs:
             _current_theme = prefs.sv_theme
 
@@ -298,11 +352,10 @@ class SvAddRemoveTheme(bpy.types.Operator):
 
     behaviour = StringProperty(default='')
 
-    def add_theme(self):
+    def add_theme(self, themeName):
         print("add_theme in action")
 
         with sv_preferences() as prefs:
-            themeName = "Dolphin Dream"
 
             theme = OrderedDict()
             nodeColors = OrderedDict()
@@ -318,7 +371,7 @@ class SvAddRemoveTheme(bpy.types.Operator):
             nodeColors["Generators"] = prefs.color_gen[:]
             nodeColors["Generators Extended"] = prefs.color_genx[:]
 
-            errorColors["Exception Color"] = prefs.exception_color[:]
+            errorColors["Exception"] = prefs.exception_color[:]
             errorColors["No Data"] = prefs.no_data_color[:]
 
             heatMapColors["Heat Map Cold"] = prefs.heat_map_cold[:]
@@ -330,35 +383,38 @@ class SvAddRemoveTheme(bpy.types.Operator):
 
             print("theme: ", theme)
 
-            save_theme(theme, "dolphin_dream.json")
+            themeFileBase = re.sub(r'[ ]', '_', themeName.lower())
 
-    def remove_theme(self):
+            themeFileName = themeFileBase + ".json"
+            save_theme(theme, themeFileName)
+
+    def remove_theme(self, themeName):
         print("remove_theme in action")
-        with sv_preferences() as prefs:
-            themeName = prefs.sv_theme
-            remove_theme(themeName)
+        themeFileBase = re.sub(r'[ ]', '_', themeName.lower())
+        remove_theme(themeFileBase)
 
     def update_theme_list(self):
         print("update_theme_list in action")
-        load_themes(True)  # force reload
+        load_themes(True) # force reload themes
+        update_theme_list()
 
-        _theme_list.clear()
-        for name, theme in _theme_collection.items():
-            themeName = theme["Name"]
-            print("file name = ", name)
-            print("theme name = ", themeName)
-            themeItem = (name, themeName, themeName)
-            _theme_list.append(themeItem)
 
     def execute(self, context):
+        themeName = "Dolphin Dream"
         if self.behaviour == 'add':
-            self.add_theme()
+            self.add_theme(themeName)
+            self.update_theme_list()
+            with sv_preferences() as prefs:
+                themeFileBase = re.sub(r'[ ]', '_', themeName.lower())
+                prefs.sv_theme = themeFileBase
+
         elif self.behaviour == 'remove':
-            self.remove_theme()
+            self.remove_theme(themeName)
+            self.update_theme_list()
+            with sv_preferences() as prefs:
+                prefs.sv_theme = "default"
         else:
             print("Warning: invalid add/remove theme behavior")
-
-        self.update_theme_list()
 
         return {'FINISHED'}
 

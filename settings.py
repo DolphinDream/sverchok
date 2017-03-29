@@ -26,11 +26,14 @@ class SverchokPreferences(AddonPreferences):
     bl_idname = __package__
 
     def select_theme(self, context):
+        print("selecting theme: ", self.sv_theme)
         # color_def.color_callback(self, context)
         # self.load_theme_values(self.sv_theme)
         # get_theme_files_names()
+        sv_themes.set_current_theme(self.sv_theme)
+        sv_themes.update_colors()
         sv_themes.apply_theme()
-        print("selecting theme: update colors")
+
 
     def update_debug_mode(self, context):
         data_structure.DEBUG_MODE = self.show_debug
@@ -42,10 +45,11 @@ class SverchokPreferences(AddonPreferences):
         handlers.set_frame_change(self.frame_change_mode)
 
     def update_theme(self, context):
-        color_def.rebuild_color_cache()
-        if self.auto_apply_theme:
-            # color_def.apply_theme()
-            sv_themes.apply_theme()
+        print("Updating theme")
+        # color_def.rebuild_color_cache()
+        # if self.auto_apply_theme:
+        #     # color_def.apply_theme()
+        #     sv_themes.apply_theme()
 
     def update_defaults(self, context):
         print("Update Defaults")
@@ -92,9 +96,6 @@ class SverchokPreferences(AddonPreferences):
         default=(1, 1, 1), subtype='COLOR')
 
     #  theme settings
-    themeItems = [("default", "Default", "Default"),
-                  ("nipon_blossom", "Nipon Blossom", "Nipon Blossom")]
-
     sv_theme = EnumProperty(
         # items=themeItems,
         items=themePresetItems,
@@ -226,11 +227,11 @@ class SverchokPreferences(AddonPreferences):
         default=False)
 
     def split_columns(self, panel, ratios):
-        '''
-            Splits the given panel into columns based on the given ratios
-            e.g ratios = [1, 2, 1] or [.2, .3, .2] etc
-            Note: The sum of all ratio numbers don't need to be normalized
-        '''
+        """
+        Splits the given panel into columns based on the given set of ratios.
+        e.g ratios = [1, 2, 1] or [.2, .3, .2] etc
+        Note: The sum of all ratio numbers doesn't need to be normalized
+        """
         col2 = panel
         cols = []
         for n in range(len(ratios)):
