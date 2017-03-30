@@ -38,7 +38,7 @@ _theme_preset_list = []
 
 
 def get_theme_preset_list():
-    """ Get the theme preset list (used for enum property) """
+    """ Get the theme preset list (used by settings enum property) """
     # print("get the theme preset list")
     return _theme_preset_list
 
@@ -55,6 +55,16 @@ def cache_theme_preset_list():
         print("theme name = ", themeName)
         themeItem = (name, themeName, themeName)
         _theme_preset_list.append(themeItem)
+
+
+def set_current_theme_preset(themeID):
+    global _current_theme_preset
+    print("selecting current theme to:", themeID)
+    _current_theme_preset = themeID
+
+
+def get_current_theme_preset():
+    return _current_theme_preset
 
 
 def cache_category_node_list():
@@ -98,6 +108,12 @@ def get_theme_files():
     return themeFiles
 
 
+def theme_id(themeName):
+    """ Convert theme NAME into a theme ID (Nipon Blossom => nipon_blossom) """
+    themeID = re.sub(r'[ ]', '_', themeName.lower())
+    return themeID
+
+
 def load_theme(filePath):
     """ Load a theme from the given file path """
     print("loading theme: ", filePath)
@@ -110,8 +126,7 @@ def load_theme(filePath):
 
 def load_themes(reload=False):
     """ Load all the themes from disk into a cache """
-    # return if the themes are already loaded
-    if _theme_collection and not reload:
+    if _theme_collection and not reload:  # skip if already loaded
         return
 
     print("Loading the themes...")
@@ -121,12 +136,12 @@ def load_themes(reload=False):
     for f in themeFiles:
         # print("filepath: ", filePath)
         theme = load_theme(f)
-        fileName = os.path.splitext(os.path.basename(f))[0]
-        print("filename : ", fileName)
-        _theme_collection[fileName] = theme
+        themeID = theme_id(theme["Name"])
+        print("theme ID : ", themeID)
+        _theme_collection[themeID] = theme
 
-    for fileName, theme in _theme_collection.items():
-        print("Theme : ", fileName, " is called: ", theme["Name"])
+    for themeID, theme in _theme_collection.items():
+        print("Theme : ", themeID, " is called: ", theme["Name"])
 
     # print("Loaded theme collection: ", _theme_collection)
 
@@ -172,7 +187,7 @@ def save_default_themes():
     theme["Error Colors"] = errorColors
     theme["Heat Map Colors"] = heatMapColors
 
-    themeFileName = re.sub(r'[ ]', '_', themeName.lower()) + ".json"
+    themeFileName = theme_id(theme["Name"]) + ".json"
 
     save_theme(theme, themeFileName)
 
@@ -203,9 +218,9 @@ def save_default_themes():
     theme["Error Colors"] = errorColors
     theme["Heat Map Colors"] = heatMapColors
 
-    themeFileName = re.sub(r'[ ]', '_', themeName.lower()) + ".json"
+    themeFileName = theme_id(theme["Name"]) + ".json"
 
-    # print("save theme with filename: ", fileName)
+    # print("save theme with filename: ", themeFileName)
 
     save_theme(theme, themeFileName)
 
@@ -213,19 +228,21 @@ def save_default_themes():
 def remove_theme(themeName):
     """ Remove theme from theme collection and disk """
 
-    if themeName in ['default', 'nipon_blossom']:
+    themeID = theme_id(themeName)
+
+    if themeID in ['default', 'nipon_blossom']:
         print("Cannot remove the default themes")
         return
 
-    print("Removing the theme with name: ", themeName)
-    if themeName in _theme_collection:
-        print("Found theme <", themeName, "> to remove")
-        del _theme_collection[themeName]
+    print("Removing the theme with name: ", themeID)
+    if themeID in _theme_collection:
+        print("Found theme <", themeID, "> to remove")
+        del _theme_collection[themeID]
     else:
-        print("NOT Found theme <", themeName, "> to remove")
+        print("NOT Found theme <", themeID, "> to remove")
 
     themePath = get_themes_path()
-    themeFile = os.path.join(themePath, themeName + ".json")
+    themeFile = os.path.join(themePath, themeID + ".json")
     try:
         os.remove(themeFile)
     except OSError:
@@ -238,12 +255,6 @@ def get_current_theme():
     load_themes()  # make sure the themes are loaded
     print("getting the current theme for: ", _current_theme_preset)
     return _theme_collection[_current_theme_preset]  # @todo check if name exists
-
-
-def select_current_theme(themeID):
-    global _current_theme_preset
-    print("selecting current theme to:", themeID)
-    _current_theme_preset = themeID
 
 
 def theme_color(group, category):
@@ -380,9 +391,9 @@ class SvAddTheme(bpy.types.Operator):
 
             print("theme: ", theme)
 
-            themeFileBase = re.sub(r'[ ]', '_', themeName.lower())
+            themeID = theme_id(theme["Name"])
 
-            themeFileName = themeFileBase + ".json"
+            themeFileName = themeID + ".json"
             save_theme(theme, themeFileName)
 
     def update_theme_list(self):
@@ -393,15 +404,14 @@ class SvAddTheme(bpy.types.Operator):
     def execute(self, context):
         print("Executing the add/remove preset operator")
         themeName = self.name
-        themeFileBase = re.sub(r'[ ]', '_', themeName.lower())
+        themeID = theme_id(themeName)
         with sv_preferences() as prefs:
-            if prefs.current_theme == themeFileBase and not self.overwrite:
+            if prefs.current_theme == themeID and not self.overwrite:
                 self.report({'ERROR'}, "A theme with given name already exists!")
             else:
                 self.add_theme(themeName)
                 self.update_theme_list()
-                themeFileBase = re.sub(r'[ ]', '_', themeName.lower())
-                prefs.current_theme = themeFileBase
+                prefs.current_theme = themeID
 
         return {'FINISHED'}
 
@@ -437,8 +447,7 @@ class SvRemoveTheme(bpy.types.Operator):
 
     def remove_theme(self, themeName):
         print("remove_theme in action")
-        themeFileBase = re.sub(r'[ ]', '_', themeName.lower())
-        remove_theme(themeFileBase)
+        remove_theme(themeName)
 
     def update_theme_list(self):
         print("update_theme_list in action")
@@ -451,11 +460,13 @@ class SvRemoveTheme(bpy.types.Operator):
             if prefs.current_theme in ['default', 'nipon_blossom']:
                 self.report({'ERROR'}, "Cannot remove default themes!")
             else:
-                theme = get_current_theme()
-                themeName = theme["Name"]
-                self.remove_theme(themeName)
-                self.update_theme_list()
-                prefs.current_theme = "default"
+                if self.remove_confirm:
+                    theme = get_current_theme()
+                    self.remove_theme(theme["Name"])
+                    self.update_theme_list()
+                    prefs.current_theme = "default"
+                else:
+                    self.report({'ERROR'}, "Must confirm to remove!")
 
         return {'FINISHED'}
 
@@ -463,9 +474,8 @@ class SvRemoveTheme(bpy.types.Operator):
         print("invoke to remove preset")
 
         with sv_preferences() as prefs:
-            theme = get_current_theme()
-            themeName = theme["Name"]
-            if themeName in ['Default', 'Nipon Blossom']:
+            themeID = get_current_theme_preset()
+            if themeID in ['default', 'nipon_blossom']:
                 self.report({'ERROR'}, "Cannot remove default themes!")
                 return {'FINISHED'}
             else:

@@ -27,7 +27,7 @@ class SverchokPreferences(AddonPreferences):
 
     def select_theme(self, context):
         print("selecting theme: ", self.current_theme)
-        sv_themes.select_current_theme(self.current_theme)
+        sv_themes.set_current_theme_preset(self.current_theme)
         sv_themes.update_prefs_colors()
         if self.auto_apply_theme:
             sv_themes.apply_theme()
