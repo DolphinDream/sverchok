@@ -34,6 +34,7 @@ from sverchok.utils.context_managers import sv_preferences
 _category_node_list = {}
 _theme_collection = OrderedDict()
 _current_theme_id = "default"
+_hardcoded_theme_ids = []
 _theme_preset_list = []
 
 
@@ -187,9 +188,12 @@ def save_default_themes():
     theme["Error Colors"] = errorColors
     theme["Heat Map Colors"] = heatMapColors
 
-    themeFileName = theme_id(theme["Name"]) + ".json"
+    themeID = theme_id(theme["Name"])
+    themeFileName = themeID + ".json"
 
     save_theme(theme, themeFileName)
+
+    _hardcoded_theme_ids.append(themeID)
 
     # NIPON-BLOSSOM theme
     themeName = "Nipon Blossom"
@@ -218,11 +222,11 @@ def save_default_themes():
     theme["Error Colors"] = errorColors
     theme["Heat Map Colors"] = heatMapColors
 
-    themeFileName = theme_id(theme["Name"]) + ".json"
-
-    # print("save theme with filename: ", themeFileName)
+    themeID = theme_id(theme["Name"])
+    themeFileName = themeID + ".json"
 
     save_theme(theme, themeFileName)
+    _hardcoded_theme_ids.append(themeID)
 
 
 def remove_theme(themeName):
@@ -353,16 +357,16 @@ class SvAddTheme(bpy.types.Operator):
 
     """
     Add current settings as new theme.
-    Note: it doesn't work on hardcoded themes: default, nippon_blossom
+    Note: it doesn't work on hardcoded themes.
     """
     bl_idname = "node.sv_add_theme"
     bl_label = "Add Theme"
 
-    name = StringProperty(name="Name:")
+    themeName = StringProperty(name="Name:")
     overwrite = BoolProperty(name="Overwrite")
 
     def add_theme(self, themeName):
-        print("add_theme in action: ", self.name)
+        print("add_theme in action: ", themeName)
 
         with sv_preferences() as prefs:
             theme = OrderedDict()
@@ -392,17 +396,14 @@ class SvAddTheme(bpy.types.Operator):
             print("theme: ", theme)
 
             themeID = theme_id(theme["Name"])
-
             themeFileName = themeID + ".json"
             save_theme(theme, themeFileName)
 
-    def update_theme_list(self):
-        print("update_theme_list in action")
-        load_themes(True)  # force reload themes
-        cache_theme_id_list()
+            load_themes(True)  # force reload themes
+            cache_theme_id_list()  # update theme ID list (for settings preset enum)
 
     def execute(self, context):
-        print("Executing the add/remove preset operator")
+        print("EXECUTE ethe ADD preset operator")
         themeName = self.name
         themeID = theme_id(themeName)
         with sv_preferences() as prefs:
@@ -416,14 +417,14 @@ class SvAddTheme(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        print("invoke to add preset")
+        print("INVOKE the ADD preset operator")
         with sv_preferences() as prefs:
-            theme = get_current_theme()
-            themeName = theme["Name"]
-            if themeName in ['Default', 'Nipon Blossom']:
+            themeID = get_current_themeID()
+            if themeID in _hardcoded_theme_ids:
                 self.name = "Unamed Theme"
             else:
-                self.name = themeName
+                theme = get_current_theme()
+                self.name = theme["Name"]
         self.overwrite = False
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
@@ -438,7 +439,7 @@ class SvRemoveTheme(bpy.types.Operator):
 
     """
     Remove currently selected theme.
-    Note: it doesn't work on hardcoded themes: default, nippon_blossom
+    Note: it doesn't work on hardcoded themes.
     """
     bl_idname = "node.sv_remove_theme"
     bl_label = "Remove Theme"
@@ -448,22 +449,19 @@ class SvRemoveTheme(bpy.types.Operator):
     def remove_theme(self, themeName):
         print("remove_theme in action")
         remove_theme(themeName)
-
-    def update_theme_list(self):
-        print("update_theme_list in action")
         load_themes(True)  # force reload themes
-        cache_theme_id_list()
+        cache_theme_id_list()  # update theme ID list (for settings preset enum)
 
     def execute(self, context):
-        print("Executing the add/remove preset operator")
+        print("EXECUTE the REMOVE preset operator")
         with sv_preferences() as prefs:
-            if prefs.current_theme in ['default', 'nipon_blossom']:
+            themeID = prefs.current_theme
+            if themeID in ['default', 'nipon_blossom']:
                 self.report({'ERROR'}, "Cannot remove default themes!")
             else:
                 if self.remove_confirm:
                     theme = get_current_theme()
                     self.remove_theme(theme["Name"])
-                    self.update_theme_list()
                     prefs.current_theme = "default"
                 else:
                     self.report({'ERROR'}, "Must confirm to remove!")
@@ -471,14 +469,14 @@ class SvRemoveTheme(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        print("invoke to remove preset")
-
+        print("INVOKE the REMOVE preset operator")
         with sv_preferences() as prefs:
-            themeID = get_current_themeID()
+            # themeID = get_current_themeID()
+            themeID = prefs.current_theme
             if themeID in ['default', 'nipon_blossom']:
                 self.report({'ERROR'}, "Cannot remove default themes!")
                 return {'FINISHED'}
-            else:
+            else:  # not a default theme ? => can be removed
                 self.remove_confirm = False
                 wm = context.window_manager
                 return wm.invoke_props_dialog(self)
