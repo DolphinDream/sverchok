@@ -17,7 +17,7 @@ tab_items = [
     ("DEFAULTS", "Defaults", "Various node default values", custom_icon("SV_PREFS_DEVELOPER"), 2),
 ]
 
-DEBUG = False
+DEBUG = True
 def debugPrint(*args):
     if DEBUG:
         print(*args)
@@ -53,9 +53,9 @@ class SverchokPreferences(AddonPreferences):
     def update_error_color(self, context):
         debugPrint("Updating error color")
         theme_changed = True
-        update_system.update_error_colors
         if self.auto_apply_theme:
             sv_themes.apply_theme()
+        update_system.update_error_colors(self, context)
 
     def update_heatmap(self, context):
         debugPrint("Updating heatmap")
@@ -64,9 +64,9 @@ class SverchokPreferences(AddonPreferences):
     def update_heatmap_color(self, context):
         debugPrint("Updating heatmap color")
         theme_changed = True
-        data_structure.heat_map_state(self.heat_map)
         if self.auto_apply_theme:
             sv_themes.apply_theme()
+        data_structure.heat_map_state(self.heat_map)
 
     def update_defaults(self, context):
         debugPrint("Update Defaults")

@@ -193,7 +193,7 @@ def save_default_themes():
     theme["Name"] = "Default"
 
     nodeColors["Visualizer"] = [1.0, 0.3, 0.0]
-    nodeColors["Text"] = [1.0, 0.3, 0.0]
+    nodeColors["Text"] = [0.5, 0.5, 1.0]
     nodeColors["Scene"] = [0.0, 0.5, 0.2]
     nodeColors["Layout"] = [0.674, 0.242, 0.363]
     nodeColors["Generators"] = [0.0, 0.5, 0.5]
@@ -421,14 +421,13 @@ class SvAddTheme(bpy.types.Operator):
 
     def execute(self, context):
         debugPrint("EXECUTE the ADD preset operator")
-        themeName = self.name
+        themeName = self.themeName
         themeID = theme_id(themeName)
         with sv_preferences() as prefs:
             if prefs.current_theme == themeID and not self.overwrite:
                 self.report({'ERROR'}, "A theme with given name already exists!")
             else:  # OK to add/update the theme
                 self.add_theme(themeName)
-                self.update_theme_list()
                 prefs.current_theme = themeID  # select the newly added theme
 
         return {'FINISHED'}
@@ -439,10 +438,10 @@ class SvAddTheme(bpy.types.Operator):
             # themeID = get_current_themeID()
             themeID = prefs.current_theme
             if themeID in _hardcoded_theme_ids:  # populate with generic theme name
-                self.name = "Unamed Theme"
+                self.themeName = "Unamed Theme"
             else:  # populate with current theme's name (anticipating an update)
                 theme = get_current_theme()
-                self.name = theme["Name"]
+                self.themeName = theme["Name"]
         self.overwrite = False  # assume no overwrite by default
         return context.window_manager.invoke_props_dialog(self)
 
