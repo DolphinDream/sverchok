@@ -141,8 +141,8 @@ def load_themes(reload=False):
         print("theme ID : ", themeID)
         _theme_collection[themeID] = theme
 
-    for themeID, theme in _theme_collection.items():
-        print("Theme : ", themeID, " is called: ", theme["Name"])
+    # for themeID, theme in _theme_collection.items():
+    #     print("Theme : ", themeID, " is called: ", theme["Name"])
 
     # print("Loaded theme collection: ", _theme_collection)
 
@@ -162,14 +162,12 @@ def save_default_themes():
     """ Save the hardcoded default themes to disk """
 
     # DEFAULT theme
-    themeName = "Default"
+    theme["Name"] = "Default"
 
     theme = OrderedDict()
     nodeColors = OrderedDict()
     errorColors = OrderedDict()
     heatMapColors = OrderedDict()
-
-    theme["Name"] = themeName
 
     nodeColors["Visualizer"] = [1.0, 0.3, 0.0]
     nodeColors["Text"] = [1.0, 0.3, 0.0]
@@ -189,21 +187,18 @@ def save_default_themes():
     theme["Heat Map Colors"] = heatMapColors
 
     themeID = theme_id(theme["Name"])
-    themeFileName = themeID + ".json"
 
-    save_theme(theme, themeFileName)
+    save_theme(theme, themeID + ".json")
 
-    _hardcoded_theme_ids.append(themeID)
+    _hardcoded_theme_ids.append(themeID) # keep track of the default themes
 
     # NIPON-BLOSSOM theme
-    themeName = "Nipon Blossom"
+    theme["Name"] = "Nipon Blossom"
 
     theme = OrderedDict()
     nodeColors = OrderedDict()
     errorColors = OrderedDict()
     heatMapColors = OrderedDict()
-
-    theme["Name"] = themeName
 
     nodeColors["Visualizer"] = [0.628488, 0.931008, 1.000000]
     nodeColors["Text"] = [1.000000, 0.899344, 0.974251]
@@ -223,10 +218,10 @@ def save_default_themes():
     theme["Heat Map Colors"] = heatMapColors
 
     themeID = theme_id(theme["Name"])
-    themeFileName = themeID + ".json"
 
-    save_theme(theme, themeFileName)
-    _hardcoded_theme_ids.append(themeID)
+    save_theme(theme, themeID + ".json")
+
+    _hardcoded_theme_ids.append(themeID) # keep track of the default themes
 
 
 def remove_theme(themeName):
@@ -234,11 +229,11 @@ def remove_theme(themeName):
 
     themeID = theme_id(themeName)
 
-    if themeID in ['default', 'nipon_blossom']:
+    if themeID in _hardcoded_theme_ids:
         print("Cannot remove the default themes")
         return
 
-    print("Removing the theme with name: ", themeID)
+    print("Removing the theme with name: ", themeName)
     if themeID in _theme_collection:
         print("Found theme <", themeID, "> to remove")
         del _theme_collection[themeID]
@@ -396,8 +391,7 @@ class SvAddTheme(bpy.types.Operator):
             print("theme: ", theme)
 
             themeID = theme_id(theme["Name"])
-            themeFileName = themeID + ".json"
-            save_theme(theme, themeFileName)
+            save_theme(theme, themeID + ".json")
 
             load_themes(True)  # force reload themes
             cache_theme_id_list()  # update theme ID list (for settings preset enum)
@@ -409,29 +403,29 @@ class SvAddTheme(bpy.types.Operator):
         with sv_preferences() as prefs:
             if prefs.current_theme == themeID and not self.overwrite:
                 self.report({'ERROR'}, "A theme with given name already exists!")
-            else:
+            else: # OK to add/update the theme
                 self.add_theme(themeName)
                 self.update_theme_list()
-                prefs.current_theme = themeID
+                prefs.current_theme = themeID # select the newly added theme
 
         return {'FINISHED'}
 
     def invoke(self, context, event):
         print("INVOKE the ADD preset operator")
         with sv_preferences() as prefs:
-            themeID = get_current_themeID()
-            if themeID in _hardcoded_theme_ids:
+            # themeID = get_current_themeID()
+            themeID = prefs.current_theme
+            if themeID in _hardcoded_theme_ids: # populate with generic theme name
                 self.name = "Unamed Theme"
-            else:
+            else: # populate with current theme's name (anticipating an update)
                 theme = get_current_theme()
                 self.name = theme["Name"]
-        self.overwrite = False
-        wm = context.window_manager
-        return wm.invoke_props_dialog(self)
+        self.overwrite = False # assume no overwrite by default
+        return context.window_manager.invoke_props_dialog(self)
 
     def draw(self, context):
         layout = self.layout
-        layout.prop(self, 'name')
+        layout.prop(self, 'themeName')
         layout.prop(self, 'overwrite')
 
 
@@ -456,13 +450,13 @@ class SvRemoveTheme(bpy.types.Operator):
         print("EXECUTE the REMOVE preset operator")
         with sv_preferences() as prefs:
             themeID = prefs.current_theme
-            if themeID in ['default', 'nipon_blossom']:
+            if themeID in _hardcoded_theme_ids:
                 self.report({'ERROR'}, "Cannot remove default themes!")
-            else:
+            else: # ok to remove (if confirmed)
                 if self.remove_confirm:
                     theme = get_current_theme()
                     self.remove_theme(theme["Name"])
-                    prefs.current_theme = "default"
+                    prefs.current_theme = "default" # select the default theme
                 else:
                     self.report({'ERROR'}, "Must confirm to remove!")
 
@@ -473,13 +467,12 @@ class SvRemoveTheme(bpy.types.Operator):
         with sv_preferences() as prefs:
             # themeID = get_current_themeID()
             themeID = prefs.current_theme
-            if themeID in ['default', 'nipon_blossom']:
+            if themeID in _hardcoded_theme_ids:
                 self.report({'ERROR'}, "Cannot remove default themes!")
                 return {'FINISHED'}
-            else:  # not a default theme ? => can be removed
+            else:  # not a default theme ? => can be removed (if confirmed)
                 self.remove_confirm = False
-                wm = context.window_manager
-                return wm.invoke_props_dialog(self)
+                return context.window_manager.invoke_props_dialog(self)
 
     def draw(self, context):
         layout = self.layout
