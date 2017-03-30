@@ -37,6 +37,22 @@ _current_theme_id = "default"
 _hardcoded_theme_ids = []
 _theme_preset_list = []
 
+NODE_COLORS = "Node Colors"
+ERROR_COLORS = "Error Colors"
+HEATMAP_COLORS = "Heat Map Colors"
+
+category_colorprop_map = [
+        ("Visualizer", "color_viz"),
+        ("Text", "color_tex"),
+        ("Scene", "color_sce"),
+        ("Layout", "color_lay"),
+        ("Generators", "color_gen"),
+        ("Generators Extended", "color_gex"),
+        ("Exception", "exception_color"),
+        ("No Data", "no_data_color"),
+        ("Heat Map Cold", "heat_map_cold"),
+        ("Heat Map Hot", "heat_map_hot"),
+    ]
 
 def get_theme_id_list():
     """ Get the theme preset list (used by settings enum property) """
@@ -79,7 +95,7 @@ def cache_category_node_list():
         for node in nodes:
             _category_node_list[node[0]] = category
 
-    print("category node list = ", _category_node_list)
+    # print("category node list = ", _category_node_list)
 
 
 def get_node_category(nodeID):
@@ -127,13 +143,14 @@ def load_theme(filePath):
 
 def load_themes(reload=False):
     """ Load all the themes from disk into a cache """
-    if _theme_collection and not reload:  # skip if already loaded
+    if _theme_collection and not reload:  # skip if already loaded and not reloading
         return
+
+    _theme_collection.clear()  # clear in case of reloading
 
     print("Loading the themes...")
 
     themeFiles = get_theme_files()
-
     for f in themeFiles:
         # print("filepath: ", filePath)
         theme = load_theme(f)
@@ -162,12 +179,12 @@ def save_default_themes():
     """ Save the hardcoded default themes to disk """
 
     # DEFAULT theme
-    theme["Name"] = "Default"
-
     theme = OrderedDict()
     nodeColors = OrderedDict()
     errorColors = OrderedDict()
     heatMapColors = OrderedDict()
+
+    theme["Name"] = "Default"
 
     nodeColors["Visualizer"] = [1.0, 0.3, 0.0]
     nodeColors["Text"] = [1.0, 0.3, 0.0]
@@ -182,23 +199,23 @@ def save_default_themes():
     heatMapColors["Heat Map Cold"] = [1.0, 1.0, 1.0]
     heatMapColors["Heat Map Hot"] = [0.8, 0.0, 0.0]
 
-    theme["Node Colors"] = nodeColors
-    theme["Error Colors"] = errorColors
-    theme["Heat Map Colors"] = heatMapColors
+    theme[NODE_COLORS] = nodeColors
+    theme[ERROR_COLORS] = errorColors
+    theme[HEATMAP_COLORS] = heatMapColors
 
     themeID = theme_id(theme["Name"])
 
     save_theme(theme, themeID + ".json")
 
-    _hardcoded_theme_ids.append(themeID) # keep track of the default themes
+    _hardcoded_theme_ids.append(themeID)  # keep track of the default themes IDs
 
     # NIPON-BLOSSOM theme
-    theme["Name"] = "Nipon Blossom"
-
     theme = OrderedDict()
     nodeColors = OrderedDict()
     errorColors = OrderedDict()
     heatMapColors = OrderedDict()
+
+    theme["Name"] = "Nipon Blossom"
 
     nodeColors["Visualizer"] = [0.628488, 0.931008, 1.000000]
     nodeColors["Text"] = [1.000000, 0.899344, 0.974251]
@@ -213,20 +230,19 @@ def save_default_themes():
     heatMapColors["Heat Map Cold"] = [1.0, 1.0, 1.0]
     heatMapColors["Heat Map Hot"] = [0.8, 0.0, 0.0]
 
-    theme["Node Colors"] = nodeColors
-    theme["Error Colors"] = errorColors
-    theme["Heat Map Colors"] = heatMapColors
+    theme[NODE_COLORS] = nodeColors
+    theme[ERROR_COLORS] = errorColors
+    theme[HEATMAP_COLORS] = heatMapColors
 
     themeID = theme_id(theme["Name"])
 
     save_theme(theme, themeID + ".json")
 
-    _hardcoded_theme_ids.append(themeID) # keep track of the default themes
+    _hardcoded_theme_ids.append(themeID)  # keep track of the default themes IDs
 
 
 def remove_theme(themeName):
     """ Remove theme from theme collection and disk """
-
     themeID = theme_id(themeName)
 
     if themeID in _hardcoded_theme_ids:
@@ -259,7 +275,7 @@ def get_current_theme():
 def theme_color(group, category):
     """
     Return the color in the current theme for the given group & category
-    Groups : "Node Colors", "Error Colors", "Heat Map Colors" etc
+    Groups : NODE_COLORS, ERROR_COLORS, HEATMAP_COLORS etc
     Category : "Visualizer", "Text", "Generators" etc
     """
     theme = get_current_theme()
@@ -276,27 +292,31 @@ def get_node_color(nodeID):
 
     nodeCategory = "Visualizer" if nodeCategory == "Viz" else nodeCategory
 
-    if nodeCategory in theme["Node Colors"]:
+    if nodeCategory in theme[NODE_COLORS]:
         print("Category: ", nodeCategory, " found in the theme")
-        return theme_color("Node Colors", nodeCategory)
+        return theme_color(NODE_COLORS, nodeCategory)
+        with sv_preferences() as prefs:
+            attr = category_colorprop_map[nodeCategory]
+            return prefs.attr
     else:
         print("Category: ", nodeCategory, " NOT found in the theme")
 
 
 def update_prefs_colors():
     with sv_preferences() as prefs:
-        prefs.color_viz = theme_color("Node Colors", "Visualizer")
-        prefs.color_tex = theme_color("Node Colors", "Text")
-        prefs.color_sce = theme_color("Node Colors", "Scene")
-        prefs.color_lay = theme_color("Node Colors", "Layout")
-        prefs.color_gen = theme_color("Node Colors", "Generators")
-        prefs.color_gex = theme_color("Node Colors", "Generators Extended")
+        prefs.color_viz = theme_color(NODE_COLORS, "Visualizer")
+        prefs.color_tex = theme_color(NODE_COLORS, "Text")
+        prefs.color_sce = theme_color(NODE_COLORS, "Scene")
+        prefs.color_lay = theme_color(NODE_COLORS, "Layout")
+        prefs.color_gen = theme_color(NODE_COLORS, "Generators")
+        prefs.color_gex = theme_color(NODE_COLORS, "Generators Extended")
 
-        prefs.exception_color = theme_color("Error Colors", "Exception")
-        prefs.no_data_color = theme_color("Error Colors", "No Data")
+        prefs.exception_color = theme_color(ERROR_COLORS, "Exception")
+        prefs.no_data_color = theme_color(ERROR_COLORS, "No Data")
 
-        prefs.heat_map_cold = theme_color("Heat Map Colors", "Heat Map Cold")
-        prefs.heat_map_hot = theme_color("Heat Map Colors", "Heat Map Hot")
+        prefs.heat_map_cold = theme_color(HEATMAP_COLORS, "Heat Map Cold")
+        prefs.heat_map_hot = theme_color(HEATMAP_COLORS, "Heat Map Hot")
+
 
 
 def update_colors():
@@ -352,7 +372,7 @@ class SvAddTheme(bpy.types.Operator):
 
     """
     Add current settings as new theme.
-    Note: it doesn't work on hardcoded themes.
+    Note: it will not update the hardcoded themes.
     """
     bl_idname = "node.sv_add_theme"
     bl_label = "Add Theme"
@@ -384,9 +404,9 @@ class SvAddTheme(bpy.types.Operator):
             heatMapColors["Heat Map Cold"] = prefs.heat_map_cold[:]
             heatMapColors["Heat Map Hot"] = prefs.heat_map_hot[:]
 
-            theme["Node Colors"] = nodeColors
-            theme["Error Colors"] = errorColors
-            theme["Heat Map Colors"] = heatMapColors
+            theme[NODE_COLORS] = nodeColors
+            theme[ERROR_COLORS] = errorColors
+            theme[HEATMAP_COLORS] = heatMapColors
 
             print("theme: ", theme)
 
@@ -397,16 +417,16 @@ class SvAddTheme(bpy.types.Operator):
             cache_theme_id_list()  # update theme ID list (for settings preset enum)
 
     def execute(self, context):
-        print("EXECUTE ethe ADD preset operator")
+        print("EXECUTE the ADD preset operator")
         themeName = self.name
         themeID = theme_id(themeName)
         with sv_preferences() as prefs:
             if prefs.current_theme == themeID and not self.overwrite:
                 self.report({'ERROR'}, "A theme with given name already exists!")
-            else: # OK to add/update the theme
+            else:  # OK to add/update the theme
                 self.add_theme(themeName)
                 self.update_theme_list()
-                prefs.current_theme = themeID # select the newly added theme
+                prefs.current_theme = themeID  # select the newly added theme
 
         return {'FINISHED'}
 
@@ -415,12 +435,12 @@ class SvAddTheme(bpy.types.Operator):
         with sv_preferences() as prefs:
             # themeID = get_current_themeID()
             themeID = prefs.current_theme
-            if themeID in _hardcoded_theme_ids: # populate with generic theme name
+            if themeID in _hardcoded_theme_ids:  # populate with generic theme name
                 self.name = "Unamed Theme"
-            else: # populate with current theme's name (anticipating an update)
+            else:  # populate with current theme's name (anticipating an update)
                 theme = get_current_theme()
                 self.name = theme["Name"]
-        self.overwrite = False # assume no overwrite by default
+        self.overwrite = False  # assume no overwrite by default
         return context.window_manager.invoke_props_dialog(self)
 
     def draw(self, context):
@@ -452,11 +472,11 @@ class SvRemoveTheme(bpy.types.Operator):
             themeID = prefs.current_theme
             if themeID in _hardcoded_theme_ids:
                 self.report({'ERROR'}, "Cannot remove default themes!")
-            else: # ok to remove (if confirmed)
+            else:  # OK to remove (if confirmed)
                 if self.remove_confirm:
                     theme = get_current_theme()
                     self.remove_theme(theme["Name"])
-                    prefs.current_theme = "default" # select the default theme
+                    prefs.current_theme = "default"  # select the default theme
                 else:
                     self.report({'ERROR'}, "Must confirm to remove!")
 
@@ -480,20 +500,21 @@ class SvRemoveTheme(bpy.types.Operator):
         layout.prop(self, 'remove_confirm')
 
 
+classes = [SvAddTheme, SvRemoveTheme, SvApplyTheme]
+
+
 def register():
     save_default_themes()
     load_themes()
     cache_theme_id_list()
 
-    bpy.utils.register_class(SvAddTheme)
-    bpy.utils.register_class(SvRemoveTheme)
-    bpy.utils.register_class(SvApplyTheme)
+    for cls in classes:
+        bpy.utils.register_class(cls)
 
 
 def unregister():
-    bpy.utils.unregister_class(SvAddTheme)
-    bpy.utils.unregister_class(SvRemoveTheme)
-    bpy.utils.unregister_class(SvApplyTheme)
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
 
 if __name__ == '__main__':
     register()
