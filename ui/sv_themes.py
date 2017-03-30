@@ -54,6 +54,11 @@ color_attribute_map = {
     "Heat Map Hot": "heat_map_hot",
 }
 
+DEBUG = False
+def debugPrint(*args):
+    if DEBUG:
+        print(*args)
+
 
 def get_theme_id_list():
     """ Get the theme preset list (used by settings enum property) """

@@ -17,6 +17,10 @@ tab_items = [
     ("DEFAULTS", "Defaults", "Various node default values", custom_icon("SV_PREFS_DEVELOPER"), 2),
 ]
 
+DEBUG = False
+def debugPrint(*args):
+    if DEBUG:
+        print(*args)
 
 class SverchokPreferences(AddonPreferences):
 
@@ -26,7 +30,7 @@ class SverchokPreferences(AddonPreferences):
     bl_idname = __package__
 
     def select_theme(self, context):
-        print("selecting theme: ", self.current_theme)
+        debugPrint("selecting theme: ", self.current_theme)
         sv_themes.set_current_themeID(self.current_theme)
         sv_themes.update_prefs_colors()
         if self.auto_apply_theme:
@@ -41,31 +45,31 @@ class SverchokPreferences(AddonPreferences):
         handlers.set_frame_change(self.frame_change_mode)
 
     def update_node_color(self, context):
-        print("Updating node color")
+        debugPrint("Updating node color")
         theme_changed = True
         if self.auto_apply_theme:
             sv_themes.apply_theme()
 
     def update_error_color(self, context):
-        print("Updating error color")
+        debugPrint("Updating error color")
         theme_changed = True
         update_system.update_error_colors
         if self.auto_apply_theme:
             sv_themes.apply_theme()
 
     def update_heatmap(self, context):
-        print("Updating heatmap")
+        debugPrint("Updating heatmap")
         data_structure.heat_map_state(self.heat_map)
 
     def update_heatmap_color(self, context):
-        print("Updating heatmap color")
+        debugPrint("Updating heatmap color")
         theme_changed = True
         data_structure.heat_map_state(self.heat_map)
         if self.auto_apply_theme:
             sv_themes.apply_theme()
 
     def update_defaults(self, context):
-        print("Update Defaults")
+        debugPrint("Update Defaults")
         self.load_theme_values()
 
     def theme_preset_items(self, context):
@@ -250,7 +254,7 @@ class SverchokPreferences(AddonPreferences):
         return cols
 
     def draw_general_tab_ui(self, tab):
-        # print("Draw the GENERAL tab UI")
+        # debugPrint("Draw the GENERAL tab UI")
         cols = self.split_columns(tab, [1, 1, 1])
 
         col = cols[0]
@@ -274,7 +278,7 @@ class SverchokPreferences(AddonPreferences):
         box.prop(self, "enable_center")
 
     def draw_theme_tab_ui(self, tab):
-        # print("Draw the THEME tab UI")
+        # debugPrint("Draw the THEME tab UI")
         colA, colB = self.split_columns(tab, [1, 2])
 
         colA.label(text="")
@@ -318,7 +322,7 @@ class SverchokPreferences(AddonPreferences):
             row.prop(self, name)
 
     def draw_defaults_tab_ui(self, tab):
-        # print("Draw the DEFAULTS tab UI")
+        # debugPrint("Draw the DEFAULTS tab UI")
         cols = self.split_columns(tab, [1, 1, 1, 1])
 
         col = cols[0]
