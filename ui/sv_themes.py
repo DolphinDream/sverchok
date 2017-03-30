@@ -33,7 +33,7 @@ from sverchok.utils.context_managers import sv_preferences
 
 _category_node_list = {}
 _theme_collection = OrderedDict()
-_current_theme = "default"
+_current_theme_preset = "default"
 _theme_preset_list = []
 
 
@@ -236,14 +236,14 @@ def remove_theme(themeName):
 def get_current_theme():
     """ Get the currently selected theme """
     load_themes()  # make sure the themes are loaded
-    print("getting the current theme for: ", _current_theme)
-    return _theme_collection[_current_theme]  # @todo check if name exists
+    print("getting the current theme for: ", _current_theme_preset)
+    return _theme_collection[_current_theme_preset]  # @todo check if name exists
 
 
-def select_current_theme(themeName):
-    global _current_theme
-    print("selecting current theme to:", themeName)
-    _current_theme = themeName
+def select_current_theme(themeID):
+    global _current_theme_preset
+    print("selecting current theme to:", themeID)
+    _current_theme_preset = themeID
 
 
 def theme_color(group, category):
@@ -322,11 +322,11 @@ class SvApplyTheme(bpy.types.Operator):
     tree_name = StringProperty()
 
     def execute(self, context):
-        global _current_theme
+        global _current_theme_preset
         with sv_preferences() as prefs:
-            _current_theme = prefs.current_theme
+            _current_theme_preset = prefs.current_theme
 
-        print("applying sverchok theme: ", _current_theme)
+        print("applying sverchok theme: ", _current_theme_preset)
         if self.tree_name:
             ng = bpy.data.node_groups.get(self.tree_name)
             if ng:
@@ -393,17 +393,27 @@ class SvAddTheme(bpy.types.Operator):
     def execute(self, context):
         print("Executing the add/remove preset operator")
         themeName = self.name
+        themeFileBase = re.sub(r'[ ]', '_', themeName.lower())
         with sv_preferences() as prefs:
-            self.add_theme(themeName)
-            self.update_theme_list()
-            themeFileBase = re.sub(r'[ ]', '_', themeName.lower())
-            prefs.current_theme = themeFileBase
+            if prefs.current_theme == themeFileBase and not self.overwrite:
+                self.report({'ERROR'}, "A theme with given name already exists!")
+            else:
+                self.add_theme(themeName)
+                self.update_theme_list()
+                themeFileBase = re.sub(r'[ ]', '_', themeName.lower())
+                prefs.current_theme = themeFileBase
 
         return {'FINISHED'}
 
     def invoke(self, context, event):
         print("invoke to add preset")
-        self.name = "Unamed Theme"
+        with sv_preferences() as prefs:
+            theme = get_current_theme()
+            themeName = theme["Name"]
+            if themeName in ['Default', 'Nipon Blossom']:
+                self.name = "Unamed Theme"
+            else:
+                self.name = themeName
         self.overwrite = False
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
@@ -438,9 +448,8 @@ class SvRemoveTheme(bpy.types.Operator):
     def execute(self, context):
         print("Executing the add/remove preset operator")
         with sv_preferences() as prefs:
-
             if prefs.current_theme in ['default', 'nipon_blossom']:
-                self.report({'WARNING'}, "Cannot remove default themes!")
+                self.report({'ERROR'}, "Cannot remove default themes!")
             else:
                 theme = get_current_theme()
                 themeName = theme["Name"]
@@ -452,9 +461,17 @@ class SvRemoveTheme(bpy.types.Operator):
 
     def invoke(self, context, event):
         print("invoke to remove preset")
-        self.remove_confirm = False
-        wm = context.window_manager
-        return wm.invoke_props_dialog(self)
+
+        with sv_preferences() as prefs:
+            theme = get_current_theme()
+            themeName = theme["Name"]
+            if themeName in ['Default', 'Nipon Blossom']:
+                self.report({'ERROR'}, "Cannot remove default themes!")
+                return {'FINISHED'}
+            else:
+                self.remove_confirm = False
+                wm = context.window_manager
+                return wm.invoke_props_dialog(self)
 
     def draw(self, context):
         layout = self.layout
