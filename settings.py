@@ -43,7 +43,6 @@ class SverchokPreferences(AddonPreferences):
     def update_node_color(self, context):
         print("Updating node color")
         theme_changed = True
-        sv_themes.update_colors()
         if self.auto_apply_theme:
             sv_themes.apply_theme()
 
@@ -51,19 +50,17 @@ class SverchokPreferences(AddonPreferences):
         print("Updating error color")
         theme_changed = True
         update_system.update_error_colors
-        sv_themes.update_colors()
         if self.auto_apply_theme:
             sv_themes.apply_theme()
 
     def update_heatmap(self, context):
-        print("Updating heatmap ")
+        print("Updating heatmap")
         data_structure.heat_map_state(self.heat_map)
 
     def update_heatmap_color(self, context):
         print("Updating heatmap color")
         theme_changed = True
         data_structure.heat_map_state(self.heat_map)
-        sv_themes.update_colors()
         if self.auto_apply_theme:
             sv_themes.apply_theme()
 

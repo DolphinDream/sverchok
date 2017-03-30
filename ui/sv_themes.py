@@ -42,17 +42,18 @@ ERROR_COLORS = "Error Colors"
 HEATMAP_COLORS = "Heat Map Colors"
 
 color_attribute_map = {
-        "Visualizer" : "color_viz",
-        "Text" : "color_tex",
-        "Scene" : "color_sce",
-        "Layout" : "color_lay",
-        "Generators" : "color_gen",
-        "Generators Extended" : "color_gex",
-        "Exception" : "exception_color",
-        "No Data" : "no_data_color",
-        "Heat Map Cold" : "heat_map_cold",
-        "Heat Map Hot" : "heat_map_hot",
-    }
+    "Visualizer": "color_viz",
+    "Text": "color_tex",
+    "Scene": "color_sce",
+    "Layout": "color_lay",
+    "Generators": "color_gen",
+    "Generators Extended": "color_gex",
+    "Exception": "exception_color",
+    "No Data": "no_data_color",
+    "Heat Map Cold": "heat_map_cold",
+    "Heat Map Hot": "heat_map_hot",
+}
+
 
 def get_theme_id_list():
     """ Get the theme preset list (used by settings enum property) """
@@ -318,11 +319,6 @@ def update_prefs_colors():
 
         prefs.heat_map_cold = theme_color(HEATMAP_COLORS, "Heat Map Cold")
         prefs.heat_map_hot = theme_color(HEATMAP_COLORS, "Heat Map Hot")
-
-
-
-def update_colors():
-    print("update colors")
 
 
 def sverchok_trees():
