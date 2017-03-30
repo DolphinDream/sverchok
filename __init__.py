@@ -98,7 +98,7 @@ utils_modules = [
 ]
 
 ui_modules = [
-    "color_def", "sv_IO_panel", "sv_templates_menu",
+    "sv_IO_panel", "sv_templates_menu",
     "sv_panels", "nodeview_space_menu", "nodeview_keymaps",
     "monad", "sv_icons", "sv_themes",
     # bgl modules

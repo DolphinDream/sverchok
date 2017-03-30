@@ -14,8 +14,7 @@ from sverchok.ui import (
     nodeview_bgl_viewer_draw,
     nodeview_bgl_viewer_draw_mk2,
     bgl_callback_3dview,
-    color_def,
-    sv_themes
+    sv_themes,
 )
 
 
@@ -127,7 +126,6 @@ def sv_post_load(scene):
     if addon and hasattr(addon, "preferences"):
         pref = addon.preferences
         if pref.apply_theme_on_open:
-            # color_def.apply_theme()
             sv_themes.apply_theme()
     '''
     unsafe_nodes = {
