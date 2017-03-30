@@ -33,17 +33,17 @@ from sverchok.utils.context_managers import sv_preferences
 
 _category_node_list = {}
 _theme_collection = OrderedDict()
-_current_theme_preset = "default"
+_current_theme_id = "default"
 _theme_preset_list = []
 
 
-def get_theme_preset_list():
+def get_theme_id_list():
     """ Get the theme preset list (used by settings enum property) """
     # print("get the theme preset list")
     return _theme_preset_list
 
 
-def cache_theme_preset_list():
+def cache_theme_id_list():
     """ Cache the theme preset list (triggered after add/remove theme preset)"""
     # print("cache theme preset lists")
     # print("theme preset list = ", _theme_preset_list)
@@ -57,14 +57,14 @@ def cache_theme_preset_list():
         _theme_preset_list.append(themeItem)
 
 
-def set_current_theme_preset(themeID):
-    global _current_theme_preset
+def set_current_themeID(themeID):
+    global _current_theme_id
     print("selecting current theme to:", themeID)
-    _current_theme_preset = themeID
+    _current_theme_id = themeID
 
 
-def get_current_theme_preset():
-    return _current_theme_preset
+def get_current_themeID():
+    return _current_theme_id
 
 
 def cache_category_node_list():
@@ -253,8 +253,8 @@ def remove_theme(themeName):
 def get_current_theme():
     """ Get the currently selected theme """
     load_themes()  # make sure the themes are loaded
-    print("getting the current theme for: ", _current_theme_preset)
-    return _theme_collection[_current_theme_preset]  # @todo check if name exists
+    print("getting the current theme for: ", _current_theme_id)
+    return _theme_collection[_current_theme_id]  # @todo check if name exists
 
 
 def theme_color(group, category):
@@ -333,11 +333,11 @@ class SvApplyTheme(bpy.types.Operator):
     tree_name = StringProperty()
 
     def execute(self, context):
-        global _current_theme_preset
+        global _current_theme_id
         with sv_preferences() as prefs:
-            _current_theme_preset = prefs.current_theme
+            _current_theme_id = prefs.current_theme
 
-        print("applying sverchok theme: ", _current_theme_preset)
+        print("applying sverchok theme: ", _current_theme_id)
         if self.tree_name:
             ng = bpy.data.node_groups.get(self.tree_name)
             if ng:
@@ -399,7 +399,7 @@ class SvAddTheme(bpy.types.Operator):
     def update_theme_list(self):
         print("update_theme_list in action")
         load_themes(True)  # force reload themes
-        cache_theme_preset_list()
+        cache_theme_id_list()
 
     def execute(self, context):
         print("Executing the add/remove preset operator")
@@ -452,7 +452,7 @@ class SvRemoveTheme(bpy.types.Operator):
     def update_theme_list(self):
         print("update_theme_list in action")
         load_themes(True)  # force reload themes
-        cache_theme_preset_list()
+        cache_theme_id_list()
 
     def execute(self, context):
         print("Executing the add/remove preset operator")
@@ -474,7 +474,7 @@ class SvRemoveTheme(bpy.types.Operator):
         print("invoke to remove preset")
 
         with sv_preferences() as prefs:
-            themeID = get_current_theme_preset()
+            themeID = get_current_themeID()
             if themeID in ['default', 'nipon_blossom']:
                 self.report({'ERROR'}, "Cannot remove default themes!")
                 return {'FINISHED'}
@@ -492,7 +492,7 @@ class SvRemoveTheme(bpy.types.Operator):
 def register():
     save_default_themes()
     load_themes()
-    cache_theme_preset_list()
+    cache_theme_id_list()
 
     bpy.utils.register_class(SvAddTheme)
     bpy.utils.register_class(SvRemoveTheme)
