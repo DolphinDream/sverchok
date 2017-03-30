@@ -62,27 +62,27 @@ def debugPrint(*args):
 
 def get_theme_id_list():
     """ Get the theme preset list (used by settings enum property) """
-    # print("get the theme preset list")
+    # debugPrint("get the theme preset list")
     return _theme_preset_list
 
 
 def cache_theme_id_list():
     """ Cache the theme preset list (triggered after add/remove theme preset)"""
-    # print("cache theme preset lists")
-    # print("theme preset list = ", _theme_preset_list)
-    # print("theme collection = ", _theme_collection)
+    # debugPrint("cache theme preset lists")
+    # debugPrint("theme preset list = ", _theme_preset_list)
+    # debugPrint("theme collection = ", _theme_collection)
     _theme_preset_list.clear()
     for name, theme in _theme_collection.items():
         themeName = theme["Name"]
-        print("file name = ", name)
-        print("theme name = ", themeName)
+        debugPrint("file name = ", name)
+        debugPrint("theme name = ", themeName)
         themeItem = (name, themeName, themeName)
         _theme_preset_list.append(themeItem)
 
 
 def set_current_themeID(themeID):
     global _current_theme_id
-    print("selecting current theme to:", themeID)
+    debugPrint("selecting current theme to:", themeID)
     _current_theme_id = themeID
 
 
@@ -101,7 +101,7 @@ def cache_category_node_list():
         for node in nodes:
             _category_node_list[node[0]] = category
 
-    # print("category node list = ", _category_node_list)
+    # debugPrint("category node list = ", _category_node_list)
 
 
 def get_node_category(nodeID):
@@ -139,7 +139,7 @@ def theme_id(themeName):
 
 def load_theme(filePath):
     """ Load a theme from the given file path """
-    print("loading theme: ", filePath)
+    debugPrint("loading theme: ", filePath)
     theme = {}
     with open(filePath, 'r') as infile:
         theme = json.load(infile, object_pairs_hook=OrderedDict)
@@ -154,29 +154,29 @@ def load_themes(reload=False):
 
     _theme_collection.clear()  # clear in case of reloading
 
-    print("Loading the themes...")
+    debugPrint("Loading the themes...")
 
     themeFiles = get_theme_files()
     for f in themeFiles:
-        # print("filepath: ", filePath)
+        # debugPrint("filepath: ", filePath)
         theme = load_theme(f)
         themeID = theme_id(theme["Name"])
-        print("theme ID : ", themeID)
+        debugPrint("theme ID : ", themeID)
         _theme_collection[themeID] = theme
 
     # for themeID, theme in _theme_collection.items():
-    #     print("Theme : ", themeID, " is called: ", theme["Name"])
+    #     debugPrint("Theme : ", themeID, " is called: ", theme["Name"])
 
-    # print("Loaded theme collection: ", _theme_collection)
+    # debugPrint("Loaded theme collection: ", _theme_collection)
 
 
 def save_theme(theme, fileName):
     """ Save the given theme to disk """
-    print("save theme to:", fileName)
+    debugPrint("save theme to:", fileName)
 
     themePath = get_themes_path()
     themeFile = os.path.join(themePath, fileName)
-    print("filepath: ", themeFile)
+    debugPrint("filepath: ", themeFile)
     with open(themeFile, 'w') as outfile:
         json.dump(theme, outfile, indent=4, separators=(',', ':'))
 
@@ -252,29 +252,29 @@ def remove_theme(themeName):
     themeID = theme_id(themeName)
 
     if themeID in _hardcoded_theme_ids:
-        print("Cannot remove the default themes")
+        debugPrint("Cannot remove the default themes")
         return
 
-    print("Removing the theme with name: ", themeName)
+    debugPrint("Removing the theme with name: ", themeName)
     if themeID in _theme_collection:
-        print("Found theme <", themeID, "> to remove")
+        debugPrint("Found theme <", themeID, "> to remove")
         del _theme_collection[themeID]
     else:
-        print("NOT Found theme <", themeID, "> to remove")
+        debugPrint("NOT Found theme <", themeID, "> to remove")
 
     themePath = get_themes_path()
     themeFile = os.path.join(themePath, themeID + ".json")
     try:
         os.remove(themeFile)
     except OSError:
-        print("failed to remove theme file: ", themeFile)
+        debugPrint("failed to remove theme file: ", themeFile)
         pass
 
 
 def get_current_theme():
     """ Get the currently selected theme """
     load_themes()  # make sure the themes are loaded
-    print("getting the current theme for: ", _current_theme_id)
+    debugPrint("getting the current theme for: ", _current_theme_id)
     return _theme_collection[_current_theme_id]  # @todo check if name exists
 
 
@@ -291,23 +291,23 @@ def theme_color(group, category):
 def get_node_color(nodeID):
     """ Return the theme color of a node given its node ID """
     theme = get_current_theme()
-    print("Get node color for current theme name: ", theme["Name"])
+    debugPrint("Get node color for current theme name: ", theme["Name"])
 
     nodeCategory = get_node_category(nodeID)
-    print("NodeID: ", nodeID, " is in category:", nodeCategory)
+    debugPrint("NodeID: ", nodeID, " is in category:", nodeCategory)
 
     nodeCategory = "Visualizer" if nodeCategory == "Viz" else nodeCategory
 
     if nodeCategory in theme[NODE_COLORS]:
-        print("Category: ", nodeCategory, " found in the theme")
+        debugPrint("Category: ", nodeCategory, " found in the theme")
         # return theme_color(NODE_COLORS, nodeCategory)
         with sv_preferences() as prefs:
             attr = color_attribute_map[nodeCategory]
             color = getattr(prefs, attr)
-            print("get node color for attribute: ", attr, " : ", color)
+            debugPrint("get node color for attribute: ", attr, " : ", color)
             return color
     else:
-        print("Category: ", nodeCategory, " NOT found in the theme")
+        debugPrint("Category: ", nodeCategory, " NOT found in the theme")
 
 
 def update_prefs_colors():
@@ -334,7 +334,7 @@ def sverchok_trees():
 
 def apply_theme(ng=None):
     """ Apply theme colors """
-    print("apply theme called")
+    debugPrint("apply theme called")
     if not ng:
         for ng in sverchok_trees():
             apply_theme(ng)
@@ -359,7 +359,7 @@ class SvApplyTheme(bpy.types.Operator):
         with sv_preferences() as prefs:
             _current_theme_id = prefs.current_theme
 
-        print("applying sverchok theme: ", _current_theme_id)
+        debugPrint("applying sverchok theme: ", _current_theme_id)
         if self.tree_name:
             ng = bpy.data.node_groups.get(self.tree_name)
             if ng:
@@ -384,7 +384,7 @@ class SvAddTheme(bpy.types.Operator):
     overwrite = BoolProperty(name="Overwrite")
 
     def add_theme(self, themeName):
-        print("add_theme in action: ", themeName)
+        debugPrint("add_theme in action: ", themeName)
 
         with sv_preferences() as prefs:
             theme = OrderedDict()
@@ -411,7 +411,7 @@ class SvAddTheme(bpy.types.Operator):
             theme[ERROR_COLORS] = errorColors
             theme[HEATMAP_COLORS] = heatMapColors
 
-            print("theme: ", theme)
+            debugPrint("theme: ", theme)
 
             themeID = theme_id(theme["Name"])
             save_theme(theme, themeID + ".json")
@@ -420,7 +420,7 @@ class SvAddTheme(bpy.types.Operator):
             cache_theme_id_list()  # update theme ID list (for settings preset enum)
 
     def execute(self, context):
-        print("EXECUTE the ADD preset operator")
+        debugPrint("EXECUTE the ADD preset operator")
         themeName = self.name
         themeID = theme_id(themeName)
         with sv_preferences() as prefs:
@@ -434,7 +434,7 @@ class SvAddTheme(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        print("INVOKE the ADD preset operator")
+        debugPrint("INVOKE the ADD preset operator")
         with sv_preferences() as prefs:
             # themeID = get_current_themeID()
             themeID = prefs.current_theme
@@ -464,13 +464,13 @@ class SvRemoveTheme(bpy.types.Operator):
     remove_confirm = BoolProperty(name="Confirm Remove")
 
     def remove_theme(self, themeName):
-        print("remove_theme in action")
+        debugPrint("remove_theme in action")
         remove_theme(themeName)
         load_themes(True)  # force reload themes
         cache_theme_id_list()  # update theme ID list (for settings preset enum)
 
     def execute(self, context):
-        print("EXECUTE the REMOVE preset operator")
+        debugPrint("EXECUTE the REMOVE preset operator")
         with sv_preferences() as prefs:
             themeID = prefs.current_theme
             if themeID in _hardcoded_theme_ids:
@@ -486,7 +486,7 @@ class SvRemoveTheme(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        print("INVOKE the REMOVE preset operator")
+        debugPrint("INVOKE the REMOVE preset operator")
         with sv_preferences() as prefs:
             # themeID = get_current_themeID()
             themeID = prefs.current_theme
