@@ -41,18 +41,18 @@ NODE_COLORS = "Node Colors"
 ERROR_COLORS = "Error Colors"
 HEATMAP_COLORS = "Heat Map Colors"
 
-category_colorprop_map = [
-        ("Visualizer", "color_viz"),
-        ("Text", "color_tex"),
-        ("Scene", "color_sce"),
-        ("Layout", "color_lay"),
-        ("Generators", "color_gen"),
-        ("Generators Extended", "color_gex"),
-        ("Exception", "exception_color"),
-        ("No Data", "no_data_color"),
-        ("Heat Map Cold", "heat_map_cold"),
-        ("Heat Map Hot", "heat_map_hot"),
-    ]
+color_attribute_map = {
+        "Visualizer" : "color_viz",
+        "Text" : "color_tex",
+        "Scene" : "color_sce",
+        "Layout" : "color_lay",
+        "Generators" : "color_gen",
+        "Generators Extended" : "color_gex",
+        "Exception" : "exception_color",
+        "No Data" : "no_data_color",
+        "Heat Map Cold" : "heat_map_cold",
+        "Heat Map Hot" : "heat_map_hot",
+    }
 
 def get_theme_id_list():
     """ Get the theme preset list (used by settings enum property) """
@@ -294,10 +294,12 @@ def get_node_color(nodeID):
 
     if nodeCategory in theme[NODE_COLORS]:
         print("Category: ", nodeCategory, " found in the theme")
-        return theme_color(NODE_COLORS, nodeCategory)
+        # return theme_color(NODE_COLORS, nodeCategory)
         with sv_preferences() as prefs:
-            attr = category_colorprop_map[nodeCategory]
-            return prefs.attr
+            attr = color_attribute_map[nodeCategory]
+            color = getattr(prefs, attr)
+            print("get node color for attribute: ", attr, " : ", color)
+            return color
     else:
         print("Category: ", nodeCategory, " NOT found in the theme")
 
