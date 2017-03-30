@@ -273,7 +273,7 @@ def get_node_color(nodeID):
         print("Category: ", nodeCategory, " NOT found in the theme")
 
 
-def update_colors():
+def update_prefs_colors():
     with sv_preferences() as prefs:
         prefs.color_viz = theme_color("Node Colors", "Visualizer")
         prefs.color_tex = theme_color("Node Colors", "Text")
@@ -287,6 +287,10 @@ def update_colors():
 
         prefs.heat_map_cold = theme_color("Heat Map Colors", "Heat Map Cold")
         prefs.heat_map_hot = theme_color("Heat Map Colors", "Heat Map Hot")
+
+
+def update_colors():
+    print("update colors")
 
 
 def sverchok_trees():
@@ -447,6 +451,7 @@ class SvAddRemoveTheme(bpy.types.Operator):
             layout.label('Are you sure you want to remove current theme?')
             layout.prop(self, 'remove_confirm')
 
+
 class EnterThemeName(bpy.types.Operator):
     bl_idname = "node.enter_theme_name"
     bl_label = "Enter Theme Name"
@@ -465,6 +470,7 @@ class EnterThemeName(bpy.types.Operator):
     def invoke(self, context, event):
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
+
 
 def register():
     save_default_themes()

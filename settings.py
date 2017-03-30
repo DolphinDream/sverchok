@@ -17,45 +17,65 @@ tab_items = [
     ("DEFAULTS", "Defaults", "Various node default values", custom_icon("SV_PREFS_DEVELOPER"), 2),
 ]
 
+
 class SverchokPreferences(AddonPreferences):
 
+    """
+    Handle Sverchock Preferences
+    """
     bl_idname = __package__
 
     def select_theme(self, context):
         print("selecting theme: ", self.current_theme)
-        # color_def.color_callback(self, context)
-        # self.load_theme_values(self.current_theme)
-        # get_theme_files_names()
         sv_themes.select_current_theme(self.current_theme)
-        sv_themes.update_colors()
-
+        sv_themes.update_prefs_colors()
         if self.auto_apply_theme:
             sv_themes.apply_theme()
 
+        theme_changed = False
 
     def update_debug_mode(self, context):
         data_structure.DEBUG_MODE = self.show_debug
 
-    def update_heat_map(self, context):
-        data_structure.heat_map_state(self.heat_map)
-
     def set_frame_change(self, context):
         handlers.set_frame_change(self.frame_change_mode)
 
-    def update_theme(self, context):
-        print("Updating theme")
-        # color_def.rebuild_color_cache()
-        # if self.auto_apply_theme:
-        #     # color_def.apply_theme()
-        #     sv_themes.apply_theme()
+    def update_node_color(self, context):
+        print("Updating node color")
+        theme_changed = True
+        sv_themes.update_colors()
+        if self.auto_apply_theme:
+            sv_themes.apply_theme()
+
+    def update_error_color(self, context):
+        print("Updating error color")
+        theme_changed = True
+        update_system.update_error_colors
+        sv_themes.update_colors()
+        if self.auto_apply_theme:
+            sv_themes.apply_theme()
+
+    def update_heatmap(self, context):
+        print("Updating heatmap ")
+        data_structure.heat_map_state(self.heat_map)
+
+    def update_heatmap_color(self, context):
+        print("Updating heatmap color")
+        theme_changed = True
+        data_structure.heat_map_state(self.heat_map)
+        sv_themes.update_colors()
+        if self.auto_apply_theme:
+            sv_themes.apply_theme()
 
     def update_defaults(self, context):
         print("Update Defaults")
         self.load_theme_values()
 
-    def themePresetItems(self, context):
+    def theme_preset_items(self, context):
         themeItems = sv_themes.get_theme_preset_list()
         return themeItems
+
+    theme_changed = BoolProperty(default=False)
 
     #  debugish...
     show_debug = BoolProperty(
@@ -64,41 +84,41 @@ class SverchokPreferences(AddonPreferences):
         default=False, subtype='NONE',
         update=update_debug_mode)
 
+    # error color settings
     no_data_color = FloatVectorProperty(
         name="No data", description='When a node can not get data',
         size=3, min=0.0, max=1.0,
         default=(1, 0.3, 0), subtype='COLOR',
-        update=update_system.update_error_colors)
+        update=update_error_color)
 
     exception_color = FloatVectorProperty(
         name="Error", description='When node has an exception',
         size=3, min=0.0, max=1.0,
         default=(0.8, 0.0, 0), subtype='COLOR',
-        update=update_system.update_error_colors)
+        update=update_error_color)
 
     #  heat map settings
     heat_map = BoolProperty(
-        name="Heat map",
-        description="Color nodes according to time",
+        name="Heat map", description="Color nodes according to processing time",
         default=False, subtype='NONE',
-        update=update_heat_map)
+        update=update_heatmap)
 
     heat_map_hot = FloatVectorProperty(
         name="Heat map hot", description='',
         size=3, min=0.0, max=1.0,
-        default=(.8, 0, 0), subtype='COLOR')
+        default=(.8, 0, 0), subtype='COLOR',
+        update=update_heatmap_color)
 
     heat_map_cold = FloatVectorProperty(
         name="Heat map cold", description='',
         size=3, min=0.0, max=1.0,
-        default=(1, 1, 1), subtype='COLOR')
+        default=(1, 1, 1), subtype='COLOR',
+        update=update_heatmap_color)
 
     #  theme settings
     current_theme = EnumProperty(
-        # items=themeItems,
-        items=themePresetItems,
-        name="Theme preset",
-        description="Select a theme preset",
+        items=theme_preset_items,
+        name="Theme preset", description="Select a theme preset",
         update=select_theme)
 
     auto_apply_theme = BoolProperty(
@@ -109,51 +129,42 @@ class SverchokPreferences(AddonPreferences):
         name="Apply theme", description="Apply theme automatically on open",
         default=False)
 
+    # node colors
     color_viz = FloatVectorProperty(
-        name="Visualization", description='',
+        name="Visualization", description='Vizsualizer nodes color',
         size=3, min=0.0, max=1.0,
         default=(1, 0.3, 0), subtype='COLOR',
-        update=update_theme)
-
-    # colors = {}
-
-    # for f in range(10):Er
-    #     colors[f] = FloatVectorProperty(
-    #         name="Color", description='Next Color',
-    #         size=3, min=0.0, max=1.0,
-    #         default=(0.5, 0.5, 0.5), subtype='COLOR',
-    #         update=update_theme)
-    #     # print(f)
+        update=update_node_color)
 
     color_tex = FloatVectorProperty(
-        name="Text", description='',
+        name="Text", description='Text nodes color',
         size=3, min=0.0, max=1.0,
         default=(0.5, 0.5, 1), subtype='COLOR',
-        update=update_theme)
+        update=update_node_color)
 
     color_sce = FloatVectorProperty(
-        name="Scene", description='',
+        name="Scene", description='Scene nodes color',
         size=3, min=0.0, max=1.0,
         default=(0, 0.5, 0.2), subtype='COLOR',
-        update=update_theme)
+        update=update_node_color)
 
     color_lay = FloatVectorProperty(
-        name="Layout", description='',
+        name="Layout", description='Layout nodes color',
         size=3, min=0.0, max=1.0,
         default=(0.674, 0.242, 0.363), subtype='COLOR',
-        update=update_theme)
+        update=update_node_color)
 
     color_gen = FloatVectorProperty(
-        name="Generator", description='',
+        name="Generator", description='Generator nodes color',
         size=3, min=0.0, max=1.0,
         default=(0, 0.5, 0.5), subtype='COLOR',
-        update=update_theme)
+        update=update_node_color)
 
     color_gex = FloatVectorProperty(
-        name="Generator X", description='',
+        name="Generator X", description='Generator extended nodes color',
         size=3, min=0.0, max=1.0,
         default=(0.4, 0.7, 0.7), subtype='COLOR',
-        update=update_theme)
+        update=update_node_color)
 
     #  frame change
     frame_change_modes = [
@@ -164,8 +175,7 @@ class SverchokPreferences(AddonPreferences):
 
     frame_change_mode = EnumProperty(
         items=frame_change_modes,
-        name="Frame change",
-        description="Select frame change handler",
+        name="Frame change", description="Select frame change handler",
         default="POST",
         update=set_frame_change)
 
@@ -182,11 +192,11 @@ class SverchokPreferences(AddonPreferences):
         description="Enable SV icon manager node")
 
     over_sized_buttons = BoolProperty(
-        name="Big buttons",
-        default=False,
-        description="Very big buttons")
+        name="Big buttons", description="Very big buttons",
+        default=False)
 
     enable_live_objin = BoolProperty(
+        name="Enable Live Object-In",
         description="Objects in edit mode will be updated in object-in Node")
 
     tabs = EnumProperty(
@@ -251,8 +261,8 @@ class SverchokPreferences(AddonPreferences):
         col.label(text="Debug:")
         box = col.box()
         box.prop(self, "show_debug")
-        box.prop(self, "enable_live_objin", text='Enable Live Object-In')
-        box.prop(self, "heat_map", text="Heat Map")
+        box.prop(self, "enable_live_objin")
+        box.prop(self, "heat_map")
 
         col = cols[1]
 
@@ -311,16 +321,6 @@ class SverchokPreferences(AddonPreferences):
         for name in ['heat_map_hot', 'heat_map_cold']:
             row = box.row()
             row.prop(self, name)
-
-        # print("there are ", len(self.colors), " custom colors")
-        # colB2.label("Other Colors:")
-        # box = colB2.box()
-        # for color in self.colors.values():
-        #     print("color = ", color)
-        #     # name = color.name
-        #     row = box.row()
-        #     row.prop(self, "colors[1]")
-        #     # row.prop(self, name)
 
     def draw_defaults_tab_ui(self, tab):
         # print("Draw the DEFAULTS tab UI")
