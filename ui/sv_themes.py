@@ -338,27 +338,22 @@ class SvApplyTheme(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class SvAddRemoveTheme(bpy.types.Operator):
+class SvAddTheme(bpy.types.Operator):
 
     """
-    Add current settings as new theme or remove currently selected theme.
+    Add current settings as new theme.
     Note: it doesn't work on hardcoded themes: default, nippon_blossom
     """
-    bl_idname = "node.sv_add_remove_theme"
-    bl_label = "Add Remove Theme"
+    bl_idname = "node.sv_add_theme"
+    bl_label = "Add Theme"
 
     name = StringProperty(name="Name:")
     overwrite = BoolProperty(name="Overwrite")
-    remove_confirm = BoolProperty(name="Confirm Remove")
-    behaviour = StringProperty(default='')
-
-    # name = StringProperty(default='')
 
     def add_theme(self, themeName):
         print("add_theme in action: ", self.name)
 
         with sv_preferences() as prefs:
-
             theme = OrderedDict()
             nodeColors = OrderedDict()
             errorColors = OrderedDict()
@@ -390,6 +385,46 @@ class SvAddRemoveTheme(bpy.types.Operator):
             themeFileName = themeFileBase + ".json"
             save_theme(theme, themeFileName)
 
+    def update_theme_list(self):
+        print("update_theme_list in action")
+        load_themes(True)  # force reload themes
+        cache_theme_preset_list()
+
+    def execute(self, context):
+        print("Executing the add/remove preset operator")
+        themeName = self.name
+        with sv_preferences() as prefs:
+            self.add_theme(themeName)
+            self.update_theme_list()
+            themeFileBase = re.sub(r'[ ]', '_', themeName.lower())
+            prefs.current_theme = themeFileBase
+
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        print("invoke to add preset")
+        self.name = "Unamed Theme"
+        self.overwrite = False
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, 'name')
+        layout.prop(self, 'overwrite')
+
+
+class SvRemoveTheme(bpy.types.Operator):
+
+    """
+    Remove currently selected theme.
+    Note: it doesn't work on hardcoded themes: default, nippon_blossom
+    """
+    bl_idname = "node.sv_remove_theme"
+    bl_label = "Remove Theme"
+
+    remove_confirm = BoolProperty(name="Confirm Remove")
+
     def remove_theme(self, themeName):
         print("remove_theme in action")
         themeFileBase = re.sub(r'[ ]', '_', themeName.lower())
@@ -402,74 +437,29 @@ class SvAddRemoveTheme(bpy.types.Operator):
 
     def execute(self, context):
         print("Executing the add/remove preset operator")
-        themeName = self.name
-        # themeName = "Dolphin Dream"
         with sv_preferences() as prefs:
 
-            if self.behaviour == 'add':
-                self.add_theme(themeName)
-                self.update_theme_list()
-                themeFileBase = re.sub(r'[ ]', '_', themeName.lower())
-                prefs.current_theme = themeFileBase
-
-            elif self.behaviour == 'remove':
-                if prefs.current_theme in ['default', 'nipon_blossom']:
-                    self.report({'WARNING'}, "Cannot remove default themes!")
-                else:
-                    self.remove_theme(themeName)
-                    self.update_theme_list()
-                    prefs.current_theme = "default"
+            if prefs.current_theme in ['default', 'nipon_blossom']:
+                self.report({'WARNING'}, "Cannot remove default themes!")
             else:
-                print("Warning: invalid add/remove theme behavior")
+                theme = get_current_theme()
+                themeName = theme["Name"]
+                self.remove_theme(themeName)
+                self.update_theme_list()
+                prefs.current_theme = "default"
 
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        if self.behaviour == 'add':
-            print("invoke to add preset")
-            self.name = "Unamed Theme"
-            self.overwrite = False
-            wm = context.window_manager
-            return wm.invoke_props_dialog(self)
-        elif self.behaviour == 'remove':
-            print("invoke to remove preset")
-            self.name = _current_theme
-            self.remove_confirm = False
-            wm = context.window_manager
-            return wm.invoke_props_dialog(self)
-            # return self.execute(context)
-        else:
-            print("Warning: invalid add/remove theme behavior")
-            return {'FINISHED'}
+        print("invoke to remove preset")
+        self.remove_confirm = False
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
 
     def draw(self, context):
         layout = self.layout
-        if self.behaviour == 'add':
-            layout.prop(self, 'name')
-            layout.prop(self, 'overwrite')
-        elif self.behaviour == 'remove':
-            layout.label('Are you sure you want to remove current theme?')
-            layout.prop(self, 'remove_confirm')
-
-
-class EnterThemeName(bpy.types.Operator):
-    bl_idname = "node.enter_theme_name"
-    bl_label = "Enter Theme Name"
-
-    name = bpy.props.StringProperty(name="Name:")
-    overwrite = bpy.props.BoolProperty(name="Overwrite")
-
-    def execute(self, context):
-        message = "%s, %d" % (self.name, self.overwrite)
-        self.report({'INFO'}, message)
-        print("message=", message)
-
-        bpy.ops.node.sv_add_remove_theme('EXEC_DEFAULT', behaviour="add", name=self.name)
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        wm = context.window_manager
-        return wm.invoke_props_dialog(self)
+        layout.label('Are you sure you want to remove current theme?')
+        layout.prop(self, 'remove_confirm')
 
 
 def register():
@@ -477,14 +467,14 @@ def register():
     load_themes()
     cache_theme_preset_list()
 
-    bpy.utils.register_class(EnterThemeName)
-    bpy.utils.register_class(SvAddRemoveTheme)
+    bpy.utils.register_class(SvAddTheme)
+    bpy.utils.register_class(SvRemoveTheme)
     bpy.utils.register_class(SvApplyTheme)
 
 
 def unregister():
-    bpy.utils.unregister_class(EnterThemeName)
-    bpy.utils.unregister_class(SvAddRemoveTheme)
+    bpy.utils.unregister_class(SvAddTheme)
+    bpy.utils.unregister_class(SvRemoveTheme)
     bpy.utils.unregister_class(SvApplyTheme)
 
 if __name__ == '__main__':

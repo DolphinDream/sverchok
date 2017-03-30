@@ -287,8 +287,6 @@ class SverchokPreferences(AddonPreferences):
         box.prop(self, 'apply_theme_on_open', text="Apply theme when opening file")
         box.separator()
         box.operator('node.sverchok_apply_theme2', text="Apply theme to layouts")
-        box.separator()
-        box.operator('node.enter_theme_name')
 
         colA.label(text="UI settings:")
         box = colA.box()
@@ -298,8 +296,8 @@ class SverchokPreferences(AddonPreferences):
 
         row = colB.row(align=True)
         row.prop(self, 'current_theme')
-        row.operator("node.sv_add_remove_theme", text="", icon='ZOOMIN').behaviour = "add"
-        row.operator("node.sv_add_remove_theme", text="", icon='ZOOMOUT').behaviour = "remove"
+        row.operator("node.sv_add_theme", text="", icon='ZOOMIN')
+        row.operator("node.sv_remove_theme", text="", icon='ZOOMOUT')
 
         colB1, colB2 = self.split_columns(colB, [1, 1])
 
