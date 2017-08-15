@@ -49,6 +49,7 @@ class SvSplitEdgesNode(bpy.types.Node, SverchCustomTreeNode):
         self.inputs.new('StringsSocket', "Factor").prop_name = 'factor'
 
         self.outputs.new('VerticesSocket',  "Vertices")
+        self.outputs.new('VerticesSocket',  "Split Verts")
         self.outputs.new('StringsSocket',  "Edges")
 
     def draw_buttons(self, context, layout):
@@ -71,6 +72,7 @@ class SvSplitEdgesNode(bpy.types.Node, SverchCustomTreeNode):
         offset = len(vertList)
         newVerts = list(vertList)
         newEdges = []
+        splitVerts = []
         i = 0
         for edge, f in zip(*params):
             i0 = edge[0]
@@ -85,13 +87,15 @@ class SvSplitEdgesNode(bpy.types.Node, SverchCustomTreeNode):
                 vy = v0[1] * (1 - f) + v1[1] * f
                 vz = v0[2] * (1 - f) + v1[2] * f
                 va = [vx, vy, vz]
-                newVerts.append(va)
+                # newVerts.append(va)
+                splitVerts.append(va)
 
                 vx = v0[0] * f + v1[0] * (1 - f)
                 vy = v0[1] * f + v1[1] * (1 - f)
                 vz = v0[2] * f + v1[2] * (1 - f)
                 vb = [vx, vy, vz]
-                newVerts.append(vb)
+                # newVerts.append(vb)
+                splitVerts.append(vb)
 
                 newEdges.append([i0, offset + i])  # v0 - va
                 newEdges.append([offset + i, offset + i + 1])  # va - vb
@@ -103,13 +107,17 @@ class SvSplitEdgesNode(bpy.types.Node, SverchCustomTreeNode):
                 vy = v0[1] * (1 - f) + v1[1] * f
                 vz = v0[2] * (1 - f) + v1[2] * f
                 va = [vx, vy, vz]
-                newVerts.append(va)
+                # newVerts.append(va)
+                splitVerts.append(va)
 
                 newEdges.append([i0, offset + i])  # v0 - va
                 newEdges.append([offset + i, i1])  # va - v1
                 i = i + 1
 
+        newVerts.extend(splitVerts)
+
         self.outputs['Vertices'].sv_set([newVerts])
+        self.outputs['Split Verts'].sv_set([splitVerts])
         self.outputs['Edges'].sv_set([newEdges])
 
 
