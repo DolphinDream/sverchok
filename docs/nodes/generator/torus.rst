@@ -19,7 +19,6 @@ All inputs are vectorized and they will accept single or multiple values.
 - **Spin Sections**
 - **Revolution Phase**
 - **Spin Phase**
-- **Spin Twist**
 
 Notes:
 [1] : Major/Minor radii are available when Major/Minor mode is elected.
@@ -52,8 +51,6 @@ All parameters except **mode** and **Separate** can be given by the node or an e
 | **Revolution Phase**    |  Float     |  0.00      |  Phase revolution sections by a radian amount |
 +-------------------------+------------+------------+-----------------------------------------------+
 | **Spin Phase**          |  Float     |  0.00      |  Phase spin sections by a radian amount       |
-+-------------------------+------------+------------+-----------------------------------------------+
-| **Spin Twist**          |  Float     |  0.00      |  Twist spin sections by this increment amount |
 +-------------------------+------------+------------+-----------------------------------------------+
 | **Separate**            |  Bolean    |  False     |  Grouping vertices by V direction             |
 +-------------------------+------------+------------+-----------------------------------------------+
