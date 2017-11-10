@@ -29,10 +29,6 @@ def prepare_volume(bounds, resolution, padding):
     '''
         Calculate the voxelize/padded grid, volume origin, voxel dimension
     '''
-    # print("bounds=", bounds)
-    # print("resolution=", resolution)
-    # print("padding=", padding)
-
     m_xmin, m_xmax, m_ymin, m_ymax, m_zmin, m_zmax = bounds
     m_res = float(resolution)
     m_padding = float(padding)
@@ -41,10 +37,6 @@ def prepare_volume(bounds, resolution, padding):
     m_xNum = int(ceil((m_xmax - m_xmin) / m_res)) + 2 * m_padding
     m_yNum = int(ceil((m_ymax - m_ymin) / m_res)) + 2 * m_padding
     m_zNum = int(ceil((m_zmax - m_zmin) / m_res)) + 2 * m_padding
-
-    # print("xNum=", m_xNum)
-    # print("yNum=", m_yNum)
-    # print("zNum=", m_zNum)
 
     # get the final bounding box (B3) of the padded voxelized volume
     xpad = (m_res * m_xNum - (m_xmax - m_xmin)) / 2.0
@@ -80,7 +72,7 @@ class SvMiniVoxelizerNode(bpy.types.Node, SverchCustomTreeNode):
 
     focus_range = IntProperty(
         name="Focus Range", description="Number of voxels around the focus point",
-        default=3, min=1, max=3, update=updateNode)
+        default=2, min=1, max=3, update=updateNode)
 
     padding = IntProperty(
         name="Padding", description="Number of padding voxels on each side",
@@ -92,38 +84,36 @@ class SvMiniVoxelizerNode(bpy.types.Node, SverchCustomTreeNode):
 
     def sv_init(self, context):
         self.width = 170
-        self.inputs.new('VerticesSocket', "V")
-        self.inputs.new('VerticesSocket', "F")
-        self.inputs.new('StringsSocket', "FR").prop_name = "focus_range"
-        self.inputs.new('StringsSocket', "R").prop_name = "resolution"
-        self.inputs.new('StringsSocket', "P").prop_name = "padding"
+        self.inputs.new('VerticesSocket', "Vertices")
+        self.inputs.new('VerticesSocket', "Focus")
+        self.inputs.new('StringsSocket', "Focus Range").prop_name = "focus_range"
+        self.inputs.new('StringsSocket', "Resolution").prop_name = "resolution"
+        self.inputs.new('StringsSocket', "Padding").prop_name = "padding"
 
-        self.outputs.new('VerticesSocket', "Min")
-        self.outputs.new('VerticesSocket', "Max")
-        self.outputs.new('VerticesSocket', "Mean")
-        self.outputs.new('VerticesSocket', "Size")
+        self.outputs.new('VerticesSocket', "Volume Origin")
+        self.outputs.new('VerticesSocket', "Volume Center")
+        self.outputs.new('VerticesSocket', "Volume Tight Size")
+        self.outputs.new('VerticesSocket', "Volume Padded Size")
 
-        self.outputs.new('VerticesSocket', "VO")  # volume origin
-        self.outputs.new('StringsSocket', "VD")  # voxel dimensions
-        self.outputs.new('VerticesSocket', "PB")  # padded bounds
-        self.outputs.new('VerticesSocket', "PS")  # padded size
+        self.outputs.new('StringsSocket', "Volume Dimensions")
 
-        self.outputs.new('VerticesSocket', "FC")  # focus voxel center
-        self.outputs.new('VerticesSocket', "FA")  # focus voxel array
+        self.outputs.new('VerticesSocket', "Tight Bounds")
+        self.outputs.new('VerticesSocket', "Padded Bounds")
+
+        self.outputs.new('VerticesSocket', "Voxel Size")
+        self.outputs.new('VerticesSocket', "Focus Center")
+        self.outputs.new('VerticesSocket', "Focus Array")
 
     def process(self):
         # return if no outputs are connected
         if not any(s.is_linked for s in self.outputs):
             return
 
-        verts = self.inputs["V"].sv_get()[0]  # vertices
-        focus = self.inputs["F"].sv_get()[0]  # focus
-        focus_range = self.inputs["FR"].sv_get()[0][0]  # focus range
-        resolution = self.inputs["R"].sv_get()[0][0]  # resolution
-        padding = self.inputs["P"].sv_get()[0][0]  # padding
-        # print("focus=", focus)
-        # print("focus 0 =", focus[0])
-        # print("list of focus 0=", list(focus[0]))
+        verts = self.inputs["Vertices"].sv_get()[0]
+        focus = self.inputs["Focus"].sv_get()[0]
+        focus_range = self.inputs["Focus Range"].sv_get()[0][0]
+        resolution = self.inputs["Resolution"].sv_get()[0][0]
+        padding = self.inputs["Padding"].sv_get()[0][0]
 
         A = 1e5
         minX, maxX, minY, maxY, minZ, maxZ = [A, -A, A, -A, A, -A]
@@ -137,38 +127,38 @@ class SvMiniVoxelizerNode(bpy.types.Node, SverchCustomTreeNode):
 
         bounds = [minX, maxX, minY, maxY, minZ, maxZ]
 
-        # get volume origin, voxel dimension and padded bounds
+        # get volume origin, volume voxel dimension and padded bounds/size
         vO, vD, pB, pS = prepare_volume(bounds, resolution, padding)
 
-        meanX = 0.5 * (minX + maxX)
-        meanY = 0.5 * (minY + maxY)
-        meanZ = 0.5 * (minZ + maxZ)
+        centerX = 0.5 * (minX + maxX)
+        centerY = 0.5 * (minY + maxY)
+        centerZ = 0.5 * (minZ + maxZ)
 
         sizeX = maxX - minX
         sizeY = maxY - minY
         sizeZ = maxZ - minZ
 
-        # calculate focus center and range
-        # fx, fy, fz = [0, 1, 2]
+        # calculate focus center location relative to the volume origin
         fx, fy, fz = list(focus[0])
         vox, voy, voz = vO
 
-        fox = fx - vox + resolution / 2
-        foy = fy - voy + resolution / 2
-        foz = fz - voz + resolution / 2
+        fox = fx - (vox - resolution / 2)
+        foy = fy - (voy - resolution / 2)
+        foz = fz - (voz - resolution / 2)
 
+        # focus voxel index location relative to the origin voxel
         fnx = int(fox / resolution)
         fny = int(foy / resolution)
         fnz = int(foz / resolution)
 
-        # center of the focus cell
-        cnx = vox + fnx * resolution
-        cny = voy + fny * resolution
-        cnz = voz + fnz * resolution
-        cn = [cnx, cny, cnz]
+        # center location of the focus voxel
+        fcx = vox + fnx * resolution
+        fcy = voy + fny * resolution
+        fcz = voz + fnz * resolution
+        fc = [fcx, fcy, fcz]
 
-        # array of cells around the focus cell
-        cverts = []
+        # locations of the array of voxels around the focus voxels
+        faVerts = []
         N = 2 * (focus_range-1) + 1
         for x in range(N):
             for y in range(N):
@@ -176,21 +166,22 @@ class SvMiniVoxelizerNode(bpy.types.Node, SverchCustomTreeNode):
                     dx = (x - (N - 1) / 2) * resolution
                     dy = (y - (N - 1) / 2) * resolution
                     dz = (z - (N - 1) / 2) * resolution
-                    vert = [cnx - dx, cny - dy, cnz - dz]
-                    cverts.append(vert)
+                    vert = [fcx - dx, fcy - dy, fcz - dz]
+                    faVerts.append(vert)
 
-        self.outputs["Min"].sv_set([[minX, minY, minZ]])
-        self.outputs["Max"].sv_set([[maxX, maxY, maxZ]])
-        self.outputs["Mean"].sv_set([[(meanX, meanY, meanZ)]])
-        self.outputs["Size"].sv_set([[(sizeX, sizeY, sizeZ)]])
+        self.outputs["Volume Origin"].sv_set([[tuple(vO)]])
+        self.outputs["Volume Center"].sv_set([[(centerX, centerY, centerZ)]])
+        self.outputs["Volume Tight Size"].sv_set([[(sizeX, sizeY, sizeZ)]])
+        self.outputs["Volume Padded Size"].sv_set([[tuple(pS)]])
 
-        self.outputs["VO"].sv_set([[tuple(vO)]])
-        self.outputs["VD"].sv_set([vD])
-        self.outputs["PB"].sv_set([[tuple(pB)]])
-        self.outputs["PS"].sv_set([[tuple(pS)]])
+        self.outputs["Volume Dimensions"].sv_set([vD])
 
-        self.outputs["FC"].sv_set([[tuple(cn)]])
-        self.outputs["FA"].sv_set([[cverts]])
+        self.outputs["Tight Bounds"].sv_set([[tuple(bounds)]])
+        self.outputs["Padded Bounds"].sv_set([[tuple(pB)]])
+
+        self.outputs["Voxel Size"].sv_set([[tuple([resolution, resolution, resolution])]])
+        self.outputs["Focus Center"].sv_set([[tuple(fc)]])
+        self.outputs["Focus Array"].sv_set([[faVerts]])
 
 
 def register():
