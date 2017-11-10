@@ -80,7 +80,7 @@ class SvMiniVoxelizerNode(bpy.types.Node, SverchCustomTreeNode):
 
     focus_range = IntProperty(
         name="Focus Range", description="Number of voxels around the focus point",
-        default=3, min=1, max=10, update=updateNode)
+        default=3, min=1, max=3, update=updateNode)
 
     padding = IntProperty(
         name="Padding", description="Number of padding voxels on each side",
@@ -94,7 +94,7 @@ class SvMiniVoxelizerNode(bpy.types.Node, SverchCustomTreeNode):
         self.width = 170
         self.inputs.new('VerticesSocket', "V")
         self.inputs.new('VerticesSocket', "F")
-        self.inputs.new('StringsSocket', "FR").prop_name= "focus_range"
+        self.inputs.new('StringsSocket', "FR").prop_name = "focus_range"
         self.inputs.new('StringsSocket', "R").prop_name = "resolution"
         self.inputs.new('StringsSocket', "P").prop_name = "padding"
 
@@ -108,12 +108,8 @@ class SvMiniVoxelizerNode(bpy.types.Node, SverchCustomTreeNode):
         self.outputs.new('VerticesSocket', "PB")  # padded bounds
         self.outputs.new('VerticesSocket', "PS")  # padded size
 
-        # self.outputs.new('StringsSocket', "MinX")
-        # self.outputs.new('StringsSocket', "MaxX")
-        # self.outputs.new('StringsSocket', "MinY")
-        # self.outputs.new('StringsSocket', "MaxY")
-        # self.outputs.new('StringsSocket', "MinZ")
-        # self.outputs.new('StringsSocket', "MaxZ")
+        self.outputs.new('VerticesSocket', "FC")  # focus voxel center
+        self.outputs.new('VerticesSocket', "FA")  # focus voxel array
 
     def process(self):
         # return if no outputs are connected
@@ -125,6 +121,9 @@ class SvMiniVoxelizerNode(bpy.types.Node, SverchCustomTreeNode):
         focus_range = self.inputs["FR"].sv_get()[0][0]  # focus range
         resolution = self.inputs["R"].sv_get()[0][0]  # resolution
         padding = self.inputs["P"].sv_get()[0][0]  # padding
+        # print("focus=", focus)
+        # print("focus 0 =", focus[0])
+        # print("list of focus 0=", list(focus[0]))
 
         A = 1e5
         minX, maxX, minY, maxY, minZ, maxZ = [A, -A, A, -A, A, -A]
@@ -149,14 +148,36 @@ class SvMiniVoxelizerNode(bpy.types.Node, SverchCustomTreeNode):
         sizeY = maxY - minY
         sizeZ = maxZ - minZ
 
-        # self.outputs["MinX"].sv_set([[minX]])
-        # self.outputs["MaxX"].sv_set([[maxX]])
+        # calculate focus center and range
+        # fx, fy, fz = [0, 1, 2]
+        fx, fy, fz = list(focus[0])
+        vox, voy, voz = vO
 
-        # self.outputs["MinY"].sv_set([[minY]])
-        # self.outputs["MaxY"].sv_set([[maxY]])
+        fox = fx - vox + resolution / 2
+        foy = fy - voy + resolution / 2
+        foz = fz - voz + resolution / 2
 
-        # self.outputs["MinZ"].sv_set([[minZ]])
-        # self.outputs["MaxZ"].sv_set([[maxZ]])
+        fnx = int(fox / resolution)
+        fny = int(foy / resolution)
+        fnz = int(foz / resolution)
+
+        # center of the focus cell
+        cnx = vox + fnx * resolution
+        cny = voy + fny * resolution
+        cnz = voz + fnz * resolution
+        cn = [cnx, cny, cnz]
+
+        # array of cells around the focus cell
+        cverts = []
+        N = 2 * (focus_range-1) + 1
+        for x in range(N):
+            for y in range(N):
+                for z in range(N):  # 0 1 2 .. 2*f
+                    dx = (x - (N - 1) / 2) * resolution
+                    dy = (y - (N - 1) / 2) * resolution
+                    dz = (z - (N - 1) / 2) * resolution
+                    vert = [cnx - dx, cny - dy, cnz - dz]
+                    cverts.append(vert)
 
         self.outputs["Min"].sv_set([[minX, minY, minZ]])
         self.outputs["Max"].sv_set([[maxX, maxY, maxZ]])
@@ -167,6 +188,9 @@ class SvMiniVoxelizerNode(bpy.types.Node, SverchCustomTreeNode):
         self.outputs["VD"].sv_set([vD])
         self.outputs["PB"].sv_set([[tuple(pB)]])
         self.outputs["PS"].sv_set([[tuple(pS)]])
+
+        self.outputs["FC"].sv_set([[tuple(cn)]])
+        self.outputs["FA"].sv_set([[cverts]])
 
 
 def register():
