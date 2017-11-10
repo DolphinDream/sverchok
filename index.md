@@ -651,6 +651,7 @@
     ---
     SvCombinatoricsNode
     SvFormulaNodeMk4    
+    SvMiniVoxelizerNode
 
 ## Alpha Nodes
     SvBManalyzinNode
