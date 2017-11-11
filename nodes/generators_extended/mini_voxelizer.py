@@ -176,8 +176,9 @@ class SvMiniVoxelizerNode(bpy.types.Node, SverchCustomTreeNode):
 
         self.outputs["Volume Dimensions"].sv_set([vD])
 
-        self.outputs["Tight Bounds"].sv_set([[tuple(bounds)]])
-        self.outputs["Padded Bounds"].sv_set([[tuple(pB)]])
+        tB = bounds
+        self.outputs["Tight Bounds"].sv_set([[tuple([tB[0], tB[2], tB[4]]), tuple([tB[1], tB[3], tB[5]])]])
+        self.outputs["Padded Bounds"].sv_set([[tuple([pB[0], pB[2], pB[4]]), tuple([pB[1], pB[3], pB[5]])]])
 
         self.outputs["Voxel Size"].sv_set([[tuple([resolution, resolution, resolution])]])
         self.outputs["Focus Center"].sv_set([[tuple(fc)]])
