@@ -28,19 +28,20 @@ from sverchok.data_structure import updateNode, match_long_repeat
 
 DEBUG=False
 
-def digital_root(a=1):
+def digital_root(a=1, level=1):
     digits = str(a)
-    print("digits: ", digits)
-    print(type(digits))
+    if level == 1:
+        print("DigitalRoot(", digits, ") = ")
+
     if len(digits) == 1:
+        print(" = ", a)
+        print()
         result = a
     else:
-        for digit in digits:
-            print("digit: ", digit)
-
+        digitAdd = digits.replace("", " + ")[3: -3]
         digitSum = sum(int(digit) for digit in digits)
-        # print("Number %d has %d digits to sum: %d" % (a, len(digits), digitSum))
-        result = digital_root(digitSum)
+        print(" = ", digitAdd, " = ", digitSum)
+        result = digital_root(digitSum, level+1)
 
     return result
 
@@ -74,7 +75,7 @@ class SvDigitalRootNode(bpy.types.Node, SverchCustomTreeNode):
 
         # sanitize the input values
         input_N = list(map(lambda n: max(1, int(n)), input_N))
-        print(input_N)
+        # print(input_N)
 
         # parameters=match_long_repeat([input_N])
 
@@ -82,7 +83,7 @@ class SvDigitalRootNode(bpy.types.Node, SverchCustomTreeNode):
             rootList=[]
             # for n in zip(*parameters):
             for n in input_N:
-                print(n)
+                # print(n)
                 root=digital_root(n)
                 rootList.append(root)
             self.outputs['Digital Root'].sv_set(rootList)
