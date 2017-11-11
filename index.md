@@ -676,3 +676,5 @@
     ---
     SvGetPropNodeMK2
     SvSetPropNodeMK2
+    ---
+    SvDigitalRootNode
