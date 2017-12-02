@@ -28,22 +28,57 @@ import itertools
 
 
 def intersect(edge, plane):
+    '''
+        Computes and returns the edge-plane intersection (if any)
+    '''
     L0, L1 = edge
     P0, n = plane
 
     w = P0 - L0
     m = L1 - L0
 
-    # print("m*n = ", m * n)
-    if m * n == 0:
+    if m * n == 0:  # edge is parallel to the plane => no intersection
         L = []
-    else:
-        t = (w * n) / (m * n)
-        if t >= 0 and t <= 1:
+    else:  # edge is not parallel => intersection may exist
+        t = (w * n) / (m * n)  # t=0 -> L=L0, t=1 -> L=L1
+        if t >= 0 and t <= 1:  # intersection inside of the edge
             L = L0 + t * m
-        else:
+        else:  # intersection outside of the edge
             L = []
     return L
+
+
+def poly_plane_intersection(verts, poly, plane):
+    vertsList = []
+    edgesList = []
+
+    ne = len(poly)
+    edges = [[poly[i], poly[(i + 1) % ne]] for i in range(ne)]
+    # print(poly)
+    # print(edges)
+    vlist = []
+    ip = 0
+    for i1, i2 in edges:
+        v1 = Vector(verts[i1])
+        v2 = Vector(verts[i2])
+        edge = [v1, v2]
+        # print(edge)
+        iv = intersect(edge, plane)
+
+        if iv:
+            ip = ip + 1
+            # print("vert #", ip, " iv = ", iv)
+            vert = [i for i in iv]
+            vertsList.append(vert)
+            vlist.append(len(vertsList) - 1)
+
+        if len(vlist) == 2:
+            edgesList.append([vlist[0], vlist[1]])
+
+    print("vertsList=", vertsList)
+    print("edgesList=", edgesList)
+
+    return vertsList, edgesList
 
 
 class SvPlaneIntersectNode(bpy.types.Node, SverchCustomTreeNode):
@@ -90,7 +125,7 @@ class SvPlaneIntersectNode(bpy.types.Node, SverchCustomTreeNode):
         vertsList = []
         edgesList = []
         polysList = []
-        for vs, es, ps, p0s, ns in zip(*params):
+        for verts, edges, polys, p0s, ns in zip(*params):
             # print("vs=", vs)
             # print("es=", es)
             # print("ps=", ps)
@@ -101,29 +136,18 @@ class SvPlaneIntersectNode(bpy.types.Node, SverchCustomTreeNode):
             n = Vector(ns[0])
             plane = [P0, n]
 
-            for poly in ps:
-                ne = len(poly)
-                edges = [[poly[i], poly[(i + 1) % ne]] for i in range(ne)]
-                # print(poly)
-                # print(edges)
-                vlist = []
-                ip = 0
-                for i1, i2 in edges:
-                    v1 = Vector(vs[i1])
-                    v2 = Vector(vs[i2])
-                    edge = [v1, v2]
-                    # print(edge)
-                    iv = intersect(edge, plane)
+            vl = []
+            el = []
+            i = 0
+            for poly in polys:
+                i = i +1
+                print("Poly %d of %d" % (i, len(polys)))
+                vs, es = poly_plane_intersection(verts, poly, plane)
+                vl.extend(vs)
+                el.extend(es)
 
-                    if iv:
-                        ip = ip + 1
-                        # print("vert #", ip, " iv = ", iv)
-                        vert = [i for i in iv]
-                        vertsList.append(vert)
-                        vlist.append(len(vertsList)-1)
-
-                    if len(vlist) == 2:
-                        edgesList.append([vlist[0], vlist[1]])
+            vertsList.append(vl)
+            edgesList.append(el)
 
         outputs['Verts'].sv_set(vertsList)
         outputs['Edges'].sv_set(edgesList)
