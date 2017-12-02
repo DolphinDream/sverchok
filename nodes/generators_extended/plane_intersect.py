@@ -27,7 +27,7 @@ from sverchok.data_structure import updateNode, match_long_repeat
 import itertools
 
 
-def intersect(edge, plane):
+def edge_plane_intersection(edge, plane):
     '''
         Computes and returns the edge-plane intersection (if any)
     '''
@@ -37,20 +37,25 @@ def intersect(edge, plane):
     w = P0 - L0
     m = L1 - L0
 
-    if m * n == 0:  # edge is parallel to the plane => no intersection
+    mxn = m * n # cached for performance
+    if mxn == 0:  # edge is parallel to the plane => no edge intersection
         L = []
-    else:  # edge is not parallel => intersection may exist
-        t = (w * n) / (m * n)  # t=0 -> L=L0, t=1 -> L=L1
-        if t >= 0 and t <= 1:  # intersection inside of the edge
+    else:  # edge is not parallel => intersection MAY exist
+        t = (w * n) / mxn  # t=0 -> L=L0, t=1 -> L=L1
+        if t >= 0 and t <= 1:  # intersection INSIDE of the edge
             L = L0 + t * m
-        else:  # intersection outside of the edge
+        else:  # intersection OUTSIDE of the edge (no edge intersection)
             L = []
     return L
 
 
-def poly_plane_intersection(verts, poly, plane):
-    vertsList = []
-    edgesList = []
+def poly_plane_intersection(verts, poly, plane, vertsList, edgesList):
+    # vertsList = []
+    # edgesList = []
+    # print("poly plane intersection")
+    # print("verts : ", verts)
+    # print("poly : ", poly)
+    # print("plane : ", plane)
 
     ne = len(poly)
     edges = [[poly[i], poly[(i + 1) % ne]] for i in range(ne)]
@@ -63,22 +68,41 @@ def poly_plane_intersection(verts, poly, plane):
         v2 = Vector(verts[i2])
         edge = [v1, v2]
         # print(edge)
-        iv = intersect(edge, plane)
+        iv = edge_plane_intersection(edge, plane)
 
         if iv:
             ip = ip + 1
             # print("vert #", ip, " iv = ", iv)
-            vert = [i for i in iv]
+            vert = list(iv)
             vertsList.append(vert)
             vlist.append(len(vertsList) - 1)
 
         if len(vlist) == 2:
             edgesList.append([vlist[0], vlist[1]])
 
-    print("vertsList=", vertsList)
-    print("edgesList=", edgesList)
+    # return vertsList
 
-    return vertsList, edgesList
+
+def mesh_plane_intersection(verts, edges, polys, plane):
+    # print("mesh plane intersection")
+    # print("verts : ", verts)
+    # print("edges : ", edges)
+    # print("polys : ", polys)
+    # print("plane : ", plane)
+    vertsList = []
+    edgesList = []
+    polysList = []
+    i = 0
+    for poly in polys:
+        i = i +1
+        # print("Poly %d of %d" % (i, len(polys)))
+        poly_plane_intersection(verts, poly, plane, vertsList, edgesList)
+        # vs, vl = poly_plane_intersection(verts, poly, plane, vertsList, edgesLists)
+        # vertsList.extend(vs)
+
+    # edgesList = [[i, i+1] for i in range(len(vertsList)-1)]
+
+    return vertsList, edgesList, polysList
 
 
 class SvPlaneIntersectNode(bpy.types.Node, SverchCustomTreeNode):
@@ -115,13 +139,22 @@ class SvPlaneIntersectNode(bpy.types.Node, SverchCustomTreeNode):
         input_p0s = inputs["P0"].sv_get()
         input_ns = inputs["n"].sv_get()
 
-        params = match_long_repeat([input_verts, input_edges, input_polys, input_p0s, input_ns])
+        inputs_p0s = [list(p) for p in input_p0s]
+        inputs_ns = [list(n) for n in input_ns]
+
+        # print("len ivs =", len(input_verts))
+        # print("len ies =", len(input_edges))
+        # print("len ips =", len(input_polys))
+        # print("len ip0s =", len(input_p0s))
+        # print("len ins =", len(input_ns))
+
         # print("ivs =", input_verts)
         # print("ies =", input_edges)
         # print("ips =", input_polys)
         # print("ip0s =", input_p0s)
         # print("ins =", input_ns)
 
+        params = match_long_repeat([input_verts, input_edges, input_polys, input_p0s, input_ns])
         vertsList = []
         edgesList = []
         polysList = []
@@ -131,23 +164,24 @@ class SvPlaneIntersectNode(bpy.types.Node, SverchCustomTreeNode):
             # print("ps=", ps)
             # print("p0s=", p0s)
             # print("ns=", ns)
-
-            P0 = Vector(p0s[0])
-            n = Vector(ns[0])
+            # print("")
+            # continue
+            P0 = Vector(p0s)
+            n = Vector(ns)
             plane = [P0, n]
 
-            vl = []
-            el = []
-            i = 0
-            for poly in polys:
-                i = i +1
-                print("Poly %d of %d" % (i, len(polys)))
-                vs, es = poly_plane_intersection(verts, poly, plane)
-                vl.extend(vs)
-                el.extend(es)
+            vl, el, pl = mesh_plane_intersection(verts, edges, polys, plane)
 
-            vertsList.append(vl)
-            edgesList.append(el)
+            # print("vl = ", vl)
+            # print("el = ", el)
+            # print("pl = ", pl)
+
+            if vl:
+                vertsList.append(vl)
+            if el:
+                edgesList.append(el)
+            if pl:
+                polysList.append(pl)
 
         outputs['Verts'].sv_set(vertsList)
         outputs['Edges'].sv_set(edgesList)
