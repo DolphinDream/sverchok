@@ -282,8 +282,6 @@ def generate_hypercube():
     if _hypercube:
         return
 
-    # hypercube = [[i, j, k, l] for i in [0, 1] for j in [0, 1] for k in [0, 1] for l in [0, 1]]  # 4D indices
-    # hypercube = [list(v) for v in itertools.product([0, 1], repeat=4)]
     hypercube = list(itertools.product([0, 1], repeat=4))
 
     # TODO: find a better (and working) way to do this
@@ -346,7 +344,6 @@ class SvHyperCubeNode(bpy.types.Node, SverchCustomTreeNode):
         self.outputs.new('StringsSocket', "Cells Faces")
         self.outputs.new('StringsSocket', "Vert Names")
 
-
     def process(self):
         # return if no outputs are connected
         outputs = self.outputs
@@ -356,26 +353,13 @@ class SvHyperCubeNode(bpy.types.Node, SverchCustomTreeNode):
         # input values lists
         inputs = self.inputs
 
-        # params = match_long_repeat([input_a1, input_a2, input_a3, input_a4,
-        #                             input_a5, input_a6, input_d, input_s, input_t])
-
         verts4D, edges, polys, cells, names = get_hypercube()
         verts = [list(v) for v in verts4D]
 
         vertList = []
         edgeList = []
         polyList = []
-        # for a1, a2, a3, a4, a5, a6, d, s, t in zip(*params):
-        #     a1 *= aU
-        #     a2 *= aU
-        #     a3 *= aU
-        #     a4 *= aU
-        #     a5 *= aU
-        #     a6 *= aU
-        #     verts = transform_hypercube(verts4D, a1, a2, a3, a4, a5, a6, d, s, t)
-        #     vertList.append(verts)
-        #     edgeList.append(edges)
-        #     polyList.append(polys)
+
         vertList.append(verts)
         edgeList.append(edges)
         polyList.append(polys)
@@ -385,7 +369,6 @@ class SvHyperCubeNode(bpy.types.Node, SverchCustomTreeNode):
         cellVertsIDs = cells["vertsIDs"]
         cellEdges = cells["edges"]
         cellFaces = cells["faces"]
-
 
         outputs['Verts'].sv_set(vertList)
         outputs['Edges'].sv_set(edgeList)
