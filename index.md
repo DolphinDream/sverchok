@@ -317,6 +317,11 @@
     SvSpiralNode
     SvExportGcodeNode
     SvCombinatoricsNode
+    ---
+    Sv4DMatrixInNode
+    Sv4DTransformNode
+    Sv4DProjectNode
+    Sv4DMatrixMathNode
 
 ## Alpha Nodes
     SvCurveViewerNode
