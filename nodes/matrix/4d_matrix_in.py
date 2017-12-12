@@ -25,6 +25,7 @@ from sverchok.node_tree import SverchCustomTreeNode
 from sverchok.data_structure import updateNode, match_long_repeat
 
 import numpy
+from itertools import combinations
 
 m4d_color = (.2, .6, 1, 1)
 
@@ -34,102 +35,42 @@ angleTypes = [
     ("NORM", "Norm", "", 2)]  # expects input as 0-1 values
 
 
-def get_T_mat(v):
+def get_T_matrix(t):
     T = numpy.matrix(numpy.identity(5))
     for i in range(4):
-        T[i, 4] = v[i]
+        T[i, 4] = t[i]
+    return T
 
-def get_S_mat(S):
+
+def get_S_matrix(s):
     S = numpy.matrix(numpy.identity(5))
     for i in range(4):
         S[i, i] = s[i]
+    return S
 
-def get_rot_matrix(i, j, a):
+
+def get_R_matrix(a1=0, a2=0, a3=0, a4=0, a5=0, a6=0):
+    '''
+        Return the 4D Rotation matrix given the 6 rotation angles.
+    '''
+    angles = [a1, a2, a3, a4, a5, a6]
+    R = numpy.matrix(numpy.identity(5))
+    for (i, j), a in zip(itertools.combinations(range(4), 2), angles):
     rot = numpy.mat(numpy.identity(5))
     rot[i, i] = cos(a)
     rot[j, j] = cos(a)
     rot[i, j] = -sin(a)
     rot[j, i] = sin(a)
-    return rot
-
-
-def get_R_mat(a1=0, a2=0, a3=0, a4=0, a5=0, a6=0):
-    angles = [a1, a2, a3, a4, a5, a6]
-    rot = numpy.matrix(numpy.identity(5))
-    for ij, a in zip(itertools.combinations(range(4), 2), angles):
-        i,j = ij
-        rot = rot * get_rot_matrix(i, j, a)
-    return rot
+        R = R * rot
+    return R
 
     # list(map("".join, combinations(list("XYZW"), 2)))
     # list(map("".join, combinations(list("0123"), 2)))
 
-def get_translation_matrix(v):
-    t = numpy.matrix([(1, 0, 0, 0, v[0]),
-                      (0, 1, 0, 0, v[1]),
-                      (0, 0, 1, 0, v[2]),
-                      (0, 0, 0, 1, v[3]),
-                      (0, 0, 0, 0, 1)])
-    return t
-
-
-def get_scale_matrix(s):
-    s = numpy.matrix([(s[0], 0, 0, 0, 0),
-                      (0, s[1], 0, 0, 0),
-                      (0, 0, s[2], 0, 0),
-                      (0, 0, 0, s[3], 0),
-                      (0, 0, 0, 0, 1)])
-    return s
-
-def get_rotation_matrix(a1=0, a2=0, a3=0, a4=0, a5=0, a6=0):
-    '''
-        Return the 4D Rotation matrix given the 6 rotation angles.
-    '''
-    rotXY = numpy.matrix(((cos(a1), sin(a1), 0, 0, 0),
-                          (-sin(a1), cos(a1), 0, 0, 0),
-                          (0, 0, 1, 0, 0),
-                          (0, 0, 0, 1, 0),
-                          (0, 0, 0, 0, 1)))
-    #
-    rotYZ = numpy.matrix(((1, 0, 0, 0, 0),
-                          (0, cos(a2), sin(a2), 0, 0),
-                          (0, -sin(a2), cos(a2), 0, 0),
-                          (0, 0, 0, 1, 0),
-                          (0, 0, 0, 0, 1)))
-    #
-    rotZX = numpy.matrix(((cos(a3), 0, -sin(a3), 0, 0),
-                          (0, 1, 0, 0, 0),
-                          (sin(a3), 0, cos(a3), 0, 0),
-                          (0, 0, 0, 1, 0),
-                          (0, 0, 0, 0, 1)))
-    #
-    rotXW = numpy.matrix(((cos(a4), 0, 0, sin(a4), 0),
-                          (0, 1, 0, 0, 0),
-                          (0, 0, 1, 0, 0),
-                          (-sin(a4), 0, 0, cos(a4), 0),
-                          (0, 0, 0, 0, 1)))
-    #
-    rotYW = numpy.matrix(((1, 0, 0, 0, 0),
-                          (0, cos(a5), 0, -sin(a5), 0),
-                          (0, 0, 1, 0, 0),
-                          (0, sin(a5), 0, cos(a5), 0),
-                          (0, 0, 0, 0, 1)))
-    #
-    rotZW = numpy.matrix(((1, 0, 0, 0, 0),
-                          (0, 1, 0, 0, 0),
-                          (0, 0, cos(a6), -sin(a6), 0),
-                          (0, 0, sin(a6), cos(a6), 0),
-                          (0, 0, 0, 0, 1)))
-    #
-    rotation = rotXY * rotYZ * rotZX * rotXW * rotYW * rotZW
-    #
-    return rotation
-
-
 def get_composite_matrix(a1, a2, a3, a4, a5, a6, s, t):
-    T = get_translation_matrix(t)
-    R = get_rotation_matrix(a1, a2, a3, a4, a5, a6)
-    S = get_scale_matrix(s)
+    T = get_T_matrix(t)
+    R = get_R_matrix(a1, a2, a3, a4, a5, a6)
+    S = get_S_matrix(s)
     m = T * R * S
     return m
 
