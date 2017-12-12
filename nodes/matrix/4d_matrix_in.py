@@ -70,6 +70,10 @@ def get_R_matrix(a1=0, a2=0, a3=0, a4=0, a5=0, a6=0):
         R = R * rot
     return R
 
+    m = T * R * S
+    return m
+
+
 def get_composite_matrix(a1, a2, a3, a4, a5, a6, s, t):
     """
     Return the 4D(5D) composite matrix T * R * S given the rotation angles
@@ -140,35 +144,13 @@ class Sv4DMatrixInNode(bpy.types.Node, SverchCustomTreeNode):
         name="Last Angle Type", description="Last angle units",
         default="NORM", items=angleTypes)
 
-    angle_a1 = FloatProperty(
-        name="XY", description="Angle 1",
-        default=0.0, min=0.0,
-        update=update_angle)
+    axisNames = list(map("".join, combinations(list("XYZW"), 2)))
 
-    angle_a2 = FloatProperty(
-        name="XZ", description="Angle 2",
-        default=0.0, min=0.0,
-        update=update_angle)
-
-    angle_a3 = FloatProperty(
-        name="XW", description="Angle 3",
-        default=0.0, min=0.0,
-        update=update_angle)
-
-    angle_a4 = FloatProperty(
-        name="YZ", description="Angle 4",
-        default=0.0, min=0.0,
-        update=update_angle)
-
-    angle_a5 = FloatProperty(
-        name="YW", description="Angle 5",
-        default=0.0, min=0.0,
-        update=update_angle)
-
-    angle_a6 = FloatProperty(
-        name="ZW", description="Angle 6",
-        default=0.0, min=0.0,
-        update=update_angle)
+    angle_as = []
+    for i in range(len(axisNames)):
+        angle_as[i] = FloatProperty(
+            name=axisNames[i], description="Angle " + str(i),
+            default=0.0, update=update_angle)
 
     scale = FloatVectorProperty(
         size=4,
@@ -202,7 +184,6 @@ class Sv4DMatrixInNode(bpy.types.Node, SverchCustomTreeNode):
 
     def draw_buttons(self, context, layout):
         layout.prop(self, 'angleType', expand=True)
-
 
     def process(self):
         # return if no outputs are connected
@@ -255,9 +236,3 @@ def register():
 
 def unregister():
     bpy.utils.unregister_class(Sv4DMatrixInNode)
-
-'''
-    # list(map("".join, combinations(list("XYZW"), 2)))
-    # list(map("".join, combinations(list("0123"), 2)))
-'''
-
