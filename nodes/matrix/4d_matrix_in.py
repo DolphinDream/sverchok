@@ -36,6 +36,9 @@ angleTypes = [
 
 
 def get_T_matrix(t):
+    '''
+        Return the 5D Translation matrix given the 4D translation vector.
+    '''
     T = numpy.matrix(numpy.identity(5))
     for i in range(4):
         T[i, 4] = t[i]
@@ -43,6 +46,9 @@ def get_T_matrix(t):
 
 
 def get_S_matrix(s):
+    '''
+        Return the 5D Scale matrix given the 4D scale vector.
+    '''
     S = numpy.matrix(numpy.identity(5))
     for i in range(4):
         S[i, i] = s[i]
@@ -51,23 +57,24 @@ def get_S_matrix(s):
 
 def get_R_matrix(a1=0, a2=0, a3=0, a4=0, a5=0, a6=0):
     '''
-        Return the 4D Rotation matrix given the 6 rotation angles.
+        Return the 5D Rotation matrix given the 6 rotation angles.
     '''
     angles = [a1, a2, a3, a4, a5, a6]
     R = numpy.matrix(numpy.identity(5))
-    for (i, j), a in zip(itertools.combinations(range(4), 2), angles):
-    rot = numpy.mat(numpy.identity(5))
-    rot[i, i] = cos(a)
-    rot[j, j] = cos(a)
-    rot[i, j] = -sin(a)
-    rot[j, i] = sin(a)
+    for (i, j), a in zip(combinations(range(4), 2), angles):
+        rot = numpy.mat(numpy.identity(5))
+        rot[i, i] = cos(a)
+        rot[j, j] = cos(a)
+        rot[i, j] = -sin(a)
+        rot[j, i] = sin(a)
         R = R * rot
     return R
 
-    # list(map("".join, combinations(list("XYZW"), 2)))
-    # list(map("".join, combinations(list("0123"), 2)))
-
 def get_composite_matrix(a1, a2, a3, a4, a5, a6, s, t):
+    '''
+        Return the 5D composite matrix T * R * S given the rotation angles
+        the translation and the scale 4D vectors.
+    '''
     T = get_T_matrix(t)
     R = get_R_matrix(a1, a2, a3, a4, a5, a6)
     S = get_S_matrix(s)
@@ -136,17 +143,17 @@ class Sv4DMatrixInNode(bpy.types.Node, SverchCustomTreeNode):
         update=update_angle)
 
     angle_a2 = FloatProperty(
-        name="YZ", description="Angle 2",
+        name="XZ", description="Angle 2",
         default=0.0, min=0.0,
         update=update_angle)
 
     angle_a3 = FloatProperty(
-        name="ZX", description="Angle 3",
+        name="XW", description="Angle 3",
         default=0.0, min=0.0,
         update=update_angle)
 
     angle_a4 = FloatProperty(
-        name="XW", description="Angle 4",
+        name="YZ", description="Angle 4",
         default=0.0, min=0.0,
         update=update_angle)
 
@@ -243,3 +250,9 @@ def register():
 
 def unregister():
     bpy.utils.unregister_class(Sv4DMatrixInNode)
+
+'''
+    # list(map("".join, combinations(list("XYZW"), 2)))
+    # list(map("".join, combinations(list("0123"), 2)))
+'''
+
