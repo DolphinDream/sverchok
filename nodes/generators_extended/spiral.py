@@ -105,7 +105,7 @@ def make_archimedean_spiral(flags, settings):
         x = r * cos(phi)
         y = r * sin(phi)
         z = height * t
-        addVert([x, y, z])
+        addVert((x, y, z))
 
     edges = [[i, i + 1] for i in range(len(verts) - 1)]
 
@@ -148,7 +148,7 @@ def make_logarithmic_spiral(flags, settings):
         x = r * sin(pho)
         y = r * cos(pho)
         z = height * t
-        addVert([x, y, z])
+        addVert((x, y, z))
 
     edges = [[i, i + 1] for i in range(len(verts) - 1)]
 
@@ -197,7 +197,7 @@ def make_spherical_spiral(flags, settings):
         x = cos(phi) * RxCosTheta
         y = sin(phi) * RxCosTheta
         z = eR * sin(theta)
-        addVert([x, y, z])
+        addVert((x, y, z))
 
     edges = [[i, i + 1] for i in range(len(verts) - 1)]
 
@@ -230,7 +230,7 @@ def make_ovoidal_spiral(flags, settings):
     # eR = [iR - (H/2)^2/iR]/2 ::: H = 2 * sqrt(2*iR*eR - iR*iR)
     eR = 0.5 * (iR + 0.25 * height * height / iR)
     eR2 = eR * eR  # cached for performance
-    dR = eR - iR # cached for performance
+    dR = eR - iR  # cached for performance
 
     N = N * turns  # total number of points in the spiral
 
@@ -250,7 +250,7 @@ def make_ovoidal_spiral(flags, settings):
         x = r * cos(phi) * scale
         y = r * sin(phi) * scale
         z = h * scale
-        addVert([x, y, z])
+        addVert((x, y, z))
 
     edges = [[i, i + 1] for i in range(len(verts) - 1)]
 
@@ -375,7 +375,7 @@ def make_exo_spiral(flags, settings):
         x = r * cos(phi)
         y = r * sin(phi)
         z = height * t
-        addVert([x, y, z])
+        addVert((x, y, z))
 
     edges = [[i, i + 1] for i in range(len(verts) - 1)]
 
@@ -424,7 +424,7 @@ def make_spirangle_spiral(flags, settings):
         e = e + deltaE
         r = r + deltaR * exp(e)
         phi = phi + deltaA
-        addVert([x, y, z])
+        addVert((x, y, z))
 
     edges = [[i, i + 1] for i in range(len(verts) - 1)]
 
@@ -446,11 +446,9 @@ def normalize_spiral(verts, normalize_eR, eR, iR, scale):
         r = sqrt(psx * psx + psy * psy)
         ss = iR / r * scale if iR != 0 else 1
 
-    for n in range(len(verts)):
-        verts[n][0] *= ss
-        verts[n][1] *= ss
+    vertices = [(v[0] * ss, v[1] * ss, v[2]) for v in verts]
 
-    return verts
+    return vertices
 
 
 class SvSpiralNode(bpy.types.Node, SverchCustomTreeNode):
@@ -472,8 +470,8 @@ class SvSpiralNode(bpy.types.Node, SverchCustomTreeNode):
             self.updating = False
             return
 
-        st, eR, iR, e, t, N, s, h = spiralPresets[self.presets]
-        self.stype = st
+        sT, eR, iR, e, t, N, s, h = spiralPresets[self.presets]
+        self.sType = sT
         self.eRadius = eR
         self.iRadius = iR
         self.exponent = e
@@ -493,7 +491,7 @@ class SvSpiralNode(bpy.types.Node, SverchCustomTreeNode):
         name="Presets", items=presetItems,
         update=update_presets)
 
-    stype = EnumProperty(
+    sType = EnumProperty(
         name="Type", items=spiralTypeItems,
         default="ARCHIMEDEAN", update=update_spiral)
 
@@ -541,6 +539,11 @@ class SvSpiralNode(bpy.types.Node, SverchCustomTreeNode):
         name="Turn Resolution", description="Number of vertices in one turn in the spiral",
         default=100, min=3, update=update_spiral)
 
+    separate = BoolProperty(
+        name="Separate arms",
+        description="Separate the spiral arms",
+        default=False, update=update_spiral)
+
     adaptive_resolution = BoolProperty(
         name="Adaptive Resolution",
         description="Auto adjust the curve resolution based on curve length",
@@ -557,7 +560,7 @@ class SvSpiralNode(bpy.types.Node, SverchCustomTreeNode):
     updating = BoolProperty(default=False)  # used for disabling update callback
 
     def sv_init(self, context):
-        self.width = 160
+        self.width = 170
         self.inputs.new('StringsSocket', "R").prop_name = 'eRadius'
         self.inputs.new('StringsSocket', "r").prop_name = 'iRadius'
         self.inputs.new('StringsSocket', "e").prop_name = 'exponent'
@@ -576,9 +579,11 @@ class SvSpiralNode(bpy.types.Node, SverchCustomTreeNode):
 
     def draw_buttons(self, context, layout):
         layout.prop(self, 'presets')
-        layout.prop(self, 'stype', text="")
-        layout.prop(self, 'flip')
-        if self.stype in ("LOGARITHMIC", "ARCHIMEDEAN", "SPIRANGLE"):
+        layout.prop(self, 'sType', text="")
+        row = layout.row(align=True)
+        row.prop(self, 'flip', text="Flip", toggle=True)
+        row.prop(self, 'separate', text="Separate", toggle=True)
+        if self.sType in ("LOGARITHMIC", "ARCHIMEDEAN", "SPIRANGLE"):
             layout.prop(self, 'normalize', expand=True)
 
     # def draw_buttons_ext(self, context, layout):
@@ -595,8 +600,8 @@ class SvSpiralNode(bpy.types.Node, SverchCustomTreeNode):
 
         # input values lists (single or multi value)
         inputs = self.inputs
-        input_R = inputs["R"].sv_get()[0]  # list of interior radii
-        input_r = inputs["r"].sv_get()[0]  # list of exterior radii
+        input_R = inputs["R"].sv_get()[0]  # list of exterior radii
+        input_r = inputs["r"].sv_get()[0]  # list of interior radii
         input_e = inputs["e"].sv_get()[0]  # list of exponents
         input_t = inputs["t"].sv_get()[0]  # list of turns
         input_n = inputs["n"].sv_get()[0]  # list of curve resolutions
@@ -625,25 +630,35 @@ class SvSpiralNode(bpy.types.Node, SverchCustomTreeNode):
         parameters = match_long_repeat([input_R, input_r, input_e, input_t,
                                         input_n, input_s, input_h, input_p, input_a])
 
-        make_spiral = eval("make_" + self.stype.lower() + "_spiral")
+        make_spiral = eval("make_" + self.sType.lower() + "_spiral")
 
         vertList = []
         edgeList = []
         # normList = []
         for R, r, e, t, n, s, h, p, a in zip(*parameters):
-
+            armVerts = []
+            armEdges = []
             for i in range(a):  # generate each arm
-                p = p + 2 * pi / a
-                settings = [R, r, e, t, n, s, h, p, f]  # spiral settings
+                pa = p + 2 * pi / a * i
+                settings = [R, r, e, t, n, s, h, pa, f]  # spiral settings
 
                 verts, edges, norms = make_spiral(flags, settings)
 
-                if self.stype in ("LOGARITHMIC", "ARCHIMEDEAN", "SPIRANGLE"):
+                if self.sType in ("LOGARITHMIC", "ARCHIMEDEAN", "SPIRANGLE"):
                     normalize_spiral(verts, normalize_eR, R, r, s)
 
-                vertList.append(verts)
-                edgeList.append(edges)
-                # normList.append(norms)
+                if self.separate:
+                    armVerts.append(verts)
+                    armEdges.append(edges)
+                else: # join
+                    o = len(armVerts)
+                    armVerts.extend(verts)
+                    edges = [[i1 + o, i2 + o] for (i1, i2) in edges]
+                    armEdges.extend(edges)
+
+            vertList.append(armVerts)
+            edgeList.append(armEdges)
+            # normList.append(norms)
 
         self.outputs['Vertices'].sv_set(vertList)
         self.outputs['Edges'].sv_set(edgeList)
