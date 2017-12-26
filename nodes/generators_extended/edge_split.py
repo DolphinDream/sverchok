@@ -19,10 +19,6 @@
 import bpy
 from bpy.props import IntProperty, FloatProperty, BoolProperty, EnumProperty
 
-from math import sin, cos, pi, sqrt, radians
-from random import random
-import time
-
 from sverchok.node_tree import SverchCustomTreeNode
 from sverchok.data_structure import updateNode, match_long_repeat
 
@@ -35,7 +31,7 @@ class SvSplitEdgesNode(bpy.types.Node, SverchCustomTreeNode):
 
     factor = FloatProperty(
         name="Factor", description="Split Factor",
-        default=0.5, min=0.0, soft_min=0.0, max=1.0,
+        default=0.5, min=0.0, max=1.0,
         update=updateNode)
 
     mirror = BoolProperty(
@@ -127,6 +123,3 @@ def register():
 
 def unregister():
     bpy.utils.unregister_class(SvSplitEdgesNode)
-
-if __name__ == '__main__':
-    register()
