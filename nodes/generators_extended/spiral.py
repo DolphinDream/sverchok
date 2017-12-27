@@ -580,11 +580,13 @@ class SvSpiralNode(bpy.types.Node, SverchCustomTreeNode):
     def draw_buttons(self, context, layout):
         layout.prop(self, 'presets')
         layout.prop(self, 'sType', text="")
-        row = layout.row(align=True)
+        col = layout.column(align=True)
+        if self.sType in ("LOGARITHMIC", "ARCHIMEDEAN", "SPIRANGLE"):
+            row = col.row(align=True)
+            row.prop(self, 'normalize', expand=True)
+        row = col.row(align=True)
         row.prop(self, 'flip', text="Flip", toggle=True)
         row.prop(self, 'separate', text="Separate", toggle=True)
-        if self.sType in ("LOGARITHMIC", "ARCHIMEDEAN", "SPIRANGLE"):
-            layout.prop(self, 'normalize', expand=True)
 
     # def draw_buttons_ext(self, context, layout):
     #     box = layout.box()
@@ -645,15 +647,15 @@ class SvSpiralNode(bpy.types.Node, SverchCustomTreeNode):
                 verts, edges, norms = make_spiral(flags, settings)
 
                 if self.sType in ("LOGARITHMIC", "ARCHIMEDEAN", "SPIRANGLE"):
-                    normalize_spiral(verts, normalize_eR, R, r, s)
+                    verts = normalize_spiral(verts, normalize_eR, R, r, s)
 
                 if self.separate:
                     armVerts.append(verts)
                     armEdges.append(edges)
-                else: # join
+                else:  # join the arms
                     o = len(armVerts)
-                    armVerts.extend(verts)
                     edges = [[i1 + o, i2 + o] for (i1, i2) in edges]
+                    armVerts.extend(verts)
                     armEdges.extend(edges)
 
             vertList.append(armVerts)
