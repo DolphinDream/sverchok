@@ -26,7 +26,7 @@ from math import sin, cos, pi, sqrt
 
 centeringItems = [("F1", "F1", ""), ("C", "C", ""), ("F2", "F2", "")]
 # directionItems = [("X", "X", ""), ("Y", "Y", ""), ("Z", "Z", "")]
-modeItems = [("XY", "X:Y", ""), ("RE", "R:E", ""), ("CL", "C:L", "")]
+modeItems = [("XY", "XY", ""), ("RE", "RE", ""), ("CL", "CL", "")]
 
 
 class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
@@ -105,15 +105,52 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
         layout.prop(self, "mode", expand=True)
         layout.prop(self, "centering", expand=True)
 
+
     def update_mode(self, context, layout):
         self.updating = True
 
         if self.mode == "XY":
-            self.major_radius = rx
-            self.minor_radius = ry
+            if self.lastMode == "RE":
+                r = self.radius
+                e = self.eccentricity
+                self.major_radius = r
+                self.minor_radius = r * sqrt(1-e*e)
+            elif self.lastMode == "CL":
+                c = self.foci
+                l = self.length
+                self.major_radius = l
+                self.minor_radius = sqrt(l*l - c*c)
+            else:
+                print("no mode change")
+
         elif self.mode == "RE":
+            if self.lastMode == "XY":
+                a = self.major_radius
+                b = self.minor_radius
+                self.radius = a
+                self.eccentricity = sqrt(1-(a*a)/(b*b*))
+            if self.lastMode == "CL":
+                c = self.foci
+                l = self.length
+                self.radius = l
+                self.eccentricity = c/l
+            else:
+                print("no mode change")
 
         elif self.mode == "CL":
+            if self.lastMode == "XY":
+                a = self.major_radius
+                b = self.minor_radius
+                self.foci = sqrt(a*a - b*b)
+                self.lenght = a
+            if self.lastMode == "RE":
+                r = self.radius
+                e = self.eccentricity
+                self.foci = r*e
+                self.length = r
+            else:
+                print("no mode change")
+
 
         self.updating = False
         updateNode(self, context)
