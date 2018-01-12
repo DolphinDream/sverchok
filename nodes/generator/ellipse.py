@@ -26,6 +26,7 @@ from math import sin, cos, pi, sqrt
 
 centeringItems = [("F1", "F1", ""), ("C", "C", ""), ("F2", "F2", "")]
 # directionItems = [("X", "X", ""), ("Y", "Y", ""), ("Z", "Z", "")]
+modeItems = [("XY", "X:Y", ""), ("RE", "R:E", ""), ("CL", "C:L", "")]
 
 
 class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
@@ -39,13 +40,34 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
         description="Center the ellipse around F1, C or F2",
         default="C", update=updateNode)
 
+    mode = EnumProperty(
+        name="Mode", items=modeItems,
+        description="Ellipse definition mode",
+        default="XY", update=update_mode)
+
     minor_radius = FloatProperty(
         name='Minor Radius', description='Minor radius of the ellipse',
-        default=1.0, min=0.0, update=updateNode)
+        default=1.0, min=0.0, update=update_ellipse)
 
     major_radius = FloatProperty(
         name='Major Radius', description='Major radius of the ellipse',
-        default=2.0, min=0.0, update=updateNode)
+        default=2.0, min=0.0, update=update_ellipse)
+
+    radius = FloatProperty(
+        name='Radius', description='Radius of the ellipse',
+        default=1.0, min=0.0, update=update_ellipse)
+
+    eccentricity = FloatProperty(
+        name='Eccentricity', description='Ellipse eccentricity',
+        default=0.1, min=0.0, max=1.0, update=update_ellipse)
+
+    # foci = FloatProperty(
+    #     name='Foci', description='Foci distance',
+    #     default=1.0, min=0.0, update=update_ellipse)
+
+    # lenght = FloatProperty(
+    #     name='Length', description="Ellipse length",
+    #     default=0.1, min=0.0, max=1.0, update=update_ellipse)
 
     num_verts = IntProperty(
         name='Num Verts', description='Number of vertices',
@@ -80,7 +102,29 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
         self.outputs.new('VerticesSocket', "F2", "F2")
 
     def draw_buttons(self, context, layout):
+        layout.prop(self, "mode", expand=True)
         layout.prop(self, "centering", expand=True)
+
+    def update_mode(self, context, layout):
+        self.updating = True
+
+        if self.mode == "XY":
+            self.major_radius = rx
+            self.minor_radius = ry
+        elif self.mode == "RE":
+
+        elif self.mode == "CL":
+
+        self.updating = False
+        updateNode(self, context)
+
+
+    def update_ellipse(self, context, layout):
+        if self.updating:
+            return
+
+        updateNode(self, context)
+
 
     def make_ellipse(self, Rx, Ry, N, phase, spin, scale):
         verts = []
