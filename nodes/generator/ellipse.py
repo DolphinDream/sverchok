@@ -25,7 +25,6 @@ from sverchok.data_structure import (match_long_repeat, updateNode)
 from math import sin, cos, pi, sqrt
 
 centeringItems = [("F1", "F1", ""), ("C", "C", ""), ("F2", "F2", "")]
-# directionItems = [("X", "X", ""), ("Y", "Y", ""), ("Z", "Z", "")]
 modeItems = [("XY", "XY", ""), ("RE", "RE", ""), ("CL", "CL", "")]
 
 
@@ -47,11 +46,11 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
 
     minor_radius = FloatProperty(
         name='Minor Radius', description='Minor radius of the ellipse',
-        default=1.0, min=0.0, update=update_ellipse)
+        default=0.8, min=0.0, update=update_ellipse)
 
     major_radius = FloatProperty(
         name='Major Radius', description='Major radius of the ellipse',
-        default=2.0, min=0.0, update=update_ellipse)
+        default=1.0, min=0.0, update=update_ellipse)
 
     radius = FloatProperty(
         name='Radius', description='Radius of the ellipse',
@@ -59,19 +58,19 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
 
     eccentricity = FloatProperty(
         name='Eccentricity', description='Ellipse eccentricity',
-        default=0.1, min=0.0, max=1.0, update=update_ellipse)
+        default=0.6, min=0.0, max=1.0, update=update_ellipse)
 
     # foci = FloatProperty(
     #     name='Foci', description='Foci distance',
-    #     default=1.0, min=0.0, update=update_ellipse)
+    #     default=0.6, min=0.0, update=update_ellipse)
 
     # lenght = FloatProperty(
     #     name='Length', description="Ellipse length",
-    #     default=0.1, min=0.0, max=1.0, update=update_ellipse)
+    #     default=1.0, min=0.0, update=update_ellipse)
 
     num_verts = IntProperty(
         name='Num Verts', description='Number of vertices',
-        default=24, min=3, update=updateNode)
+        default=36, min=3, update=updateNode)
 
     phase = FloatProperty(
         name='Phase', description='Ellipse phase',
@@ -105,6 +104,22 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
         layout.prop(self, "mode", expand=True)
         layout.prop(self, "centering", expand=True)
 
+    def update_sockets(self):
+        if self.mode == "XY":
+            socket1 = self.inputs["Rx"]
+            socket2 = self.inputs["Ry"]
+            socket1.replace_socket("SvStringsSocket").prop_name = "major_radius"
+            socket2.replace_socket("SvStringsSocket").prop_name = "minor_radius"
+        elif self.mode == "RE":
+            socket1 = self.inputs["Rx"]
+            socket2 = self.inputs["Ry"]
+            socket1.replace_socket("SvStringsSocket").prop_name = "radius"
+            socket2.replace_socket("SvStringsSocket").prop_name = "eccentricity"
+        else: # CL
+            socket1 = self.inputs["Rx"]
+            socket2 = self.inputs["Ry"]
+            socket1.replace_socket("SvStringsSocket").prop_name = "foci"
+            socket2.replace_socket("SvStringsSocket").prop_name = "length"
 
     def update_mode(self, context, layout):
         self.updating = True
@@ -150,7 +165,6 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
                 self.length = r
             else:
                 print("no mode change")
-
 
         self.updating = False
         updateNode(self, context)
