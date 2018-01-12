@@ -51,10 +51,26 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
         name='Num Verts', description='Number of vertices',
         default=24, min=3, update=updateNode)
 
+    phase = FloatProperty(
+        name='Phase', description='Ellipse phase',
+        default=0.0, update=updateNode)
+
+    spin = FloatProperty(
+        name='Spin', description='Ellipse spin',
+        default=0.0, update=updateNode)
+
+    scale = FloatProperty(
+        name='Scale', description='Ellipse scale',
+        default=1.0, min=0.0, update=updateNode)
+
     def sv_init(self, context):
+        self.width = 150
         self.inputs.new('StringsSocket', "Rx", "Rx").prop_name = "major_radius"
         self.inputs.new('StringsSocket', "Ry", "Ry").prop_name = "minor_radius"
         self.inputs.new('StringsSocket', "N", "N").prop_name = "num_verts"
+        self.inputs.new('StringsSocket', "Phase").prop_name = "phase"
+        self.inputs.new('StringsSocket', "Spin").prop_name = "spin"
+        self.inputs.new('StringsSocket', "Scale").prop_name = "scale"
 
         self.outputs.new('VerticesSocket', "Verts", "Verts")
         self.outputs.new('StringsSocket', "Edges", "Edges")
@@ -66,21 +82,20 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
     def draw_buttons(self, context, layout):
         layout.prop(self, "centering", expand=True)
 
-    def make_ellipse(self, Rx, Ry, N):
+    def make_ellipse(self, Rx, Ry, N, phase, spin, scale):
         verts = []
         edges = []
         polys = []
 
+        Rx = Rx * scale
+        Ry = Ry * scale
+
         if Rx > Ry:
             dx = sqrt(Rx * Rx - Ry * Ry)
             dy = 0
-            F1 = [-dx, 0, 0]
-            F2 = [+dx, 0, 0]
         else:
             dx = 0
             dy = sqrt(Ry * Ry - Rx * Rx)
-            F1 = [0, -dy, 0]
-            F2 = [0, +dy, 0]
 
         if self.centering == "F1":
             cx = -dx
@@ -92,17 +107,32 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
             cx = 0
             cy = 0
 
-        F1 = [cx - dx, cy - dy, 0]
-        F2 = [cx + dx, cy + dy, 0]
+        sins = sin(spin)
+        coss = cos(spin)
+
+        f1x = -cx - dx
+        f1y = -cy - dy
+        f1xx = f1x * coss - f1y * sins
+        f1yy = f1x * sins + f1y * coss
+        f2x = -cx + dx
+        f2y = -cy + dy
+        f2xx = f2x * coss - f2y * sins
+        f2yy = f2x * sins + f2y * coss
+
+        F1 = [f1xx, f1yy, 0]
+        F2 = [f2xx, f2yy, 0]
 
         for n in range(N):
-            a = 2 * pi * n / N
-            x = cx + Rx * cos(a)
-            y = cy + Ry * sin(a)
+            a = 2 * pi * n / N + phase
+            x = -cx + Rx * cos(a)
+            y = -cy + Ry * sin(a)
             z = 0
-            verts.append([x, y, z])
+            xx = x * coss - y * sins
+            yy = x * sins + y * coss
+            verts.append([xx, yy, z])
 
         edges = list([i, (i + 1) % N] for i in range(N + 1))
+        polys = list(range(N))
 
         return verts, edges, polys, F1, F2
 
@@ -114,24 +144,27 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
 
         # input values lists (single or multi value)
         inputs = self.inputs
-        input_Rx = inputs["Rx"].sv_get()[0]  # list of major radii
-        input_Ry = inputs["Ry"].sv_get()[0]  # list of minor radii
-        input_N = inputs["N"].sv_get()[0]  # list of number of verts
+        input_Rx = inputs["Rx"].sv_get()[0]
+        input_Ry = inputs["Ry"].sv_get()[0]
+        input_N = inputs["N"].sv_get()[0]
+        input_P = inputs["Phase"].sv_get()[0]
+        input_S = inputs["Spin"].sv_get()[0]
+        input_s = inputs["Scale"].sv_get()[0]
 
         # sanitize the input
         input_Rx = list(map(lambda x: max(0.0, x), input_Rx))
         input_Ry = list(map(lambda x: max(0.0, x), input_Ry))
         input_N = list(map(lambda x: max(3, int(x)), input_N))
 
-        parameters = match_long_repeat([input_Rx, input_Ry, input_N])
+        parameters = match_long_repeat([input_Rx, input_Ry, input_N, input_P, input_S, input_s])
 
         vertList = []
         edgeList = []
         polyList = []
         F1List = []
         F2List = []
-        for Rx, Ry, N in zip(*parameters):
-            verts, edges, polys, F1, F2 = self.make_ellipse(Rx, Ry, N)
+        for Rx, Ry, N, phase, spin, scale in zip(*parameters):
+            verts, edges, polys, F1, F2 = self.make_ellipse(Rx, Ry, N, phase, spin, scale)
             vertList.append(verts)
             edgeList.append(edges)
             polyList.append(polys)
