@@ -25,7 +25,7 @@ from sverchok.data_structure import (match_long_repeat, updateNode)
 from math import sin, cos, pi, sqrt
 
 centeringItems = [("F1", "F1", ""), ("C", "C", ""), ("F2", "F2", "")]
-modeItems = [("XY", "XY", ""), ("RE", "RE", ""), ("CL", "CL", "")]
+modeItems = [("AB", "a b", ""), ("AE", "a e", ""), ("AC", "a c", "")]
 
 
 class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
@@ -33,6 +33,64 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
     bl_idname = 'SvEllipseNode'
     bl_label = 'Ellipse'
     bl_icon = 'OUTLINER_OB_EMPTY'
+
+    def update_mode(self, context):
+        self.updating = True
+
+        if self.mode == "AB":
+            if self.lastMode == "AE":
+                r = self.radius
+                e = self.eccentricity
+                self.major_radius = r
+                self.minor_radius = r * sqrt(1 - e * e)
+            elif self.lastMode == "AC":
+                c = self.foci
+                l = self.length
+                self.major_radius = l
+                self.minor_radius = sqrt(l * l - c * c)
+            else:
+                print("no mode change")
+
+        elif self.mode == "AE":
+            if self.lastMode == "AB":
+                a = self.major_radius
+                b = self.minor_radius
+                self.radius = a
+                self.eccentricity = sqrt(1 - (b * b) / (a * a))
+            if self.lastMode == "AC":
+                c = self.foci
+                l = self.length
+                self.radius = l
+                self.eccentricity = c / l
+            else:
+                print("no mode change")
+
+        elif self.mode == "AC":
+            if self.lastMode == "AB":
+                a = self.major_radius
+                b = self.minor_radius
+                self.foci = sqrt(a * a - b * b)
+                self.lenght = a
+            if self.lastMode == "AE":
+                r = self.radius
+                e = self.eccentricity
+                self.foci = r * e
+                self.length = r
+            else:
+                print("no mode change")
+
+        self.updating = False
+
+        self.lastMode = self.mode
+
+        self.update_sockets()
+        updateNode(self, context)
+
+    def update_ellipse(self, context):
+        if self.updating:
+            return
+
+        updateNode(self, context)
 
     centering = EnumProperty(
         name="Centering", items=centeringItems,
@@ -42,7 +100,12 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
     mode = EnumProperty(
         name="Mode", items=modeItems,
         description="Ellipse definition mode",
-        default="XY", update=update_mode)
+        default="AB", update=update_mode)
+
+    lastMode = EnumProperty(
+        name="Mode", items=modeItems,
+        description="Ellipse definition last mode",
+        default="AB")
 
     minor_radius = FloatProperty(
         name='Minor Radius', description='Minor radius of the ellipse',
@@ -60,13 +123,13 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
         name='Eccentricity', description='Ellipse eccentricity',
         default=0.6, min=0.0, max=1.0, update=update_ellipse)
 
-    # foci = FloatProperty(
-    #     name='Foci', description='Foci distance',
-    #     default=0.6, min=0.0, update=update_ellipse)
+    foci = FloatProperty(
+        name='Foci', description='Foci distance',
+        default=0.6, min=0.0, update=update_ellipse)
 
-    # lenght = FloatProperty(
-    #     name='Length', description="Ellipse length",
-    #     default=1.0, min=0.0, update=update_ellipse)
+    length = FloatProperty(
+        name='Length', description="Ellipse length",
+        default=1.0, min=0.0, update=update_ellipse)
 
     num_verts = IntProperty(
         name='Num Verts', description='Number of vertices',
@@ -83,6 +146,8 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
     scale = FloatProperty(
         name='Scale', description='Ellipse scale',
         default=1.0, min=0.0, update=updateNode)
+
+    updating = BoolProperty(default=False)  # used for disabling update callback
 
     def sv_init(self, context):
         self.width = 150
@@ -104,78 +169,23 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
         layout.prop(self, "mode", expand=True)
         layout.prop(self, "centering", expand=True)
 
+
     def update_sockets(self):
-        if self.mode == "XY":
-            socket1 = self.inputs["Rx"]
-            socket2 = self.inputs["Ry"]
-            socket1.replace_socket("SvStringsSocket").prop_name = "major_radius"
-            socket2.replace_socket("SvStringsSocket").prop_name = "minor_radius"
-        elif self.mode == "RE":
-            socket1 = self.inputs["Rx"]
-            socket2 = self.inputs["Ry"]
-            socket1.replace_socket("SvStringsSocket").prop_name = "radius"
-            socket2.replace_socket("SvStringsSocket").prop_name = "eccentricity"
-        else: # CL
-            socket1 = self.inputs["Rx"]
-            socket2 = self.inputs["Ry"]
-            socket1.replace_socket("SvStringsSocket").prop_name = "foci"
-            socket2.replace_socket("SvStringsSocket").prop_name = "length"
-
-    def update_mode(self, context, layout):
-        self.updating = True
-
-        if self.mode == "XY":
-            if self.lastMode == "RE":
-                r = self.radius
-                e = self.eccentricity
-                self.major_radius = r
-                self.minor_radius = r * sqrt(1-e*e)
-            elif self.lastMode == "CL":
-                c = self.foci
-                l = self.length
-                self.major_radius = l
-                self.minor_radius = sqrt(l*l - c*c)
-            else:
-                print("no mode change")
-
-        elif self.mode == "RE":
-            if self.lastMode == "XY":
-                a = self.major_radius
-                b = self.minor_radius
-                self.radius = a
-                self.eccentricity = sqrt(1-(a*a)/(b*b*))
-            if self.lastMode == "CL":
-                c = self.foci
-                l = self.length
-                self.radius = l
-                self.eccentricity = c/l
-            else:
-                print("no mode change")
-
-        elif self.mode == "CL":
-            if self.lastMode == "XY":
-                a = self.major_radius
-                b = self.minor_radius
-                self.foci = sqrt(a*a - b*b)
-                self.lenght = a
-            if self.lastMode == "RE":
-                r = self.radius
-                e = self.eccentricity
-                self.foci = r*e
-                self.length = r
-            else:
-                print("no mode change")
-
-        self.updating = False
-        updateNode(self, context)
-
-
-    def update_ellipse(self, context, layout):
-        if self.updating:
-            return
-
-        updateNode(self, context)
-
+        if self.mode == "AB":
+            socket1 = self.inputs[0]
+            socket2 = self.inputs[1]
+            socket1.replace_socket("StringsSocket", "a").prop_name = "major_radius"
+            socket2.replace_socket("StringsSocket", "b").prop_name = "minor_radius"
+        elif self.mode == "AE":
+            socket1 = self.inputs[0]
+            socket2 = self.inputs[1]
+            socket1.replace_socket("StringsSocket", "a").prop_name = "radius"
+            socket2.replace_socket("StringsSocket", "e").prop_name = "eccentricity"
+        else:  # AC
+            socket1 = self.inputs[0]
+            socket2 = self.inputs[1]
+            socket1.replace_socket("StringsSocket", "a").prop_name = "length"
+            socket2.replace_socket("StringsSocket", "c").prop_name = "foci"
 
     def make_ellipse(self, Rx, Ry, N, phase, spin, scale):
         verts = []
@@ -224,10 +234,12 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
             z = 0
             xx = x * coss - y * sins
             yy = x * sins + y * coss
-            verts.append([xx, yy, z])
+            verts.append((xx, yy, z))
+            # verts.append([xx, yy, z])
 
-        edges = list([i, (i + 1) % N] for i in range(N + 1))
-        polys = list(range(N))
+        edges = list((i, (i + 1) % N) for i in range(N + 1))
+        # edges = list([i, (i + 1) % N] for i in range(N + 1))
+        polys = [list(range(N))]
 
         return verts, edges, polys, F1, F2
 
@@ -239,19 +251,36 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
 
         # input values lists (single or multi value)
         inputs = self.inputs
-        input_Rx = inputs["Rx"].sv_get()[0]
-        input_Ry = inputs["Ry"].sv_get()[0]
+        input_v1 = inputs[0].sv_get()[0]
+        input_v2 = inputs[1].sv_get()[0]
         input_N = inputs["N"].sv_get()[0]
         input_P = inputs["Phase"].sv_get()[0]
         input_S = inputs["Spin"].sv_get()[0]
         input_s = inputs["Scale"].sv_get()[0]
 
+        # print("v2=", input_v1)
+
+        # convert input parameters to major/minor axis
+        if self.mode == "AB":
+            input_vv1 = input_v1 # a
+            input_vv2 = input_v2 # b
+        elif self.mode == "AE":
+            input_vv1 = input_v1 # a
+            input_va, input_ve = match_long_repeat([input_v1, input_v2])
+            input_vv2 = list(map(lambda a,e: a * sqrt(1-e*e), input_va, input_ve)) # b = a * sqrt(1-e*e)
+        else: # "AC"
+            input_vv1 = input_v1 # a
+            input_va, input_vb = match_long_repeat([input_v1, input_v2])
+            input_vv2 = list(map(lambda a,b: sqrt(a*a-b*b), input_va, input_vb)) # c = sqrt(a*a - b*b)
+
+        # print("vv2=", input_v2)
+
         # sanitize the input
-        input_Rx = list(map(lambda x: max(0.0, x), input_Rx))
-        input_Ry = list(map(lambda x: max(0.0, x), input_Ry))
+        input_vv1 = list(map(lambda x: max(0.0, x), input_vv1))
+        input_vv1 = list(map(lambda x: max(0.0, x), input_vv1))
         input_N = list(map(lambda x: max(3, int(x)), input_N))
 
-        parameters = match_long_repeat([input_Rx, input_Ry, input_N, input_P, input_S, input_s])
+        parameters = match_long_repeat([input_vv1, input_vv2, input_N, input_P, input_S, input_s])
 
         vertList = []
         edgeList = []
