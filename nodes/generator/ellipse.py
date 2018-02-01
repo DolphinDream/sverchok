@@ -35,6 +35,7 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
     bl_icon = 'OUTLINER_OB_EMPTY'
 
     def update_mode(self, context):
+        ''' Update the ellipse parameters of the new mode based on previous mode ones'''
         self.updating = True
 
         if self.mode == "AB":
@@ -46,8 +47,6 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
                 a = self.major_radius
                 c = self.focal_length
                 self.minor_radius = sqrt(a * a - c * c)
-            else:
-                print("no mode change")
 
         elif self.mode == "AE":
             if self.lastMode == "AB":
@@ -58,8 +57,6 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
                 a = self.major_radius
                 c = self.focal_length
                 self.eccentricity = c / a
-            else:
-                print("no mode change")
 
         elif self.mode == "AC":
             if self.lastMode == "AB":
@@ -70,15 +67,13 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
                 a = self.major_radius
                 e = self.eccentricity
                 self.focal_length = a * e
-            else:
-                print("no mode change")
 
         self.updating = False
 
-        self.lastMode = self.mode
-
-        self.update_sockets()
-        updateNode(self, context)
+        if self.mode != self.lastMode:
+            self.lastMode = self.mode
+            self.update_sockets()
+            updateNode(self, context)
 
     def update_ellipse(self, context):
         if self.updating:
@@ -118,15 +113,15 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
         default=0.6, min=0.0, update=update_ellipse)
 
     num_verts = IntProperty(
-        name='Num Verts', description='Number of vertices',
+        name='Num Verts', description='Number of vertices in the ellipse',
         default=36, min=3, update=updateNode)
 
     phase = FloatProperty(
         name='Phase', description='Phase ellipse points around its center by this radians amount',
         default=0.0, update=updateNode)
 
-    spin = FloatProperty(
-        name='Spin', description='Spin ellipse points around selected centering point by this radians amount',
+    rotation = FloatProperty(
+        name='Rotation', description='Rotate ellipse points around the centering point by this radians amount',
         default=0.0, update=updateNode)
 
     scale = FloatProperty(
@@ -141,7 +136,7 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
         self.inputs.new('StringsSocket', "Minor Radius").prop_name = "minor_radius"
         self.inputs.new('StringsSocket', "N", "N").prop_name = "num_verts"
         self.inputs.new('StringsSocket', "Phase").prop_name = "phase"
-        self.inputs.new('StringsSocket', "Spin").prop_name = "spin"
+        self.inputs.new('StringsSocket', "Rotation").prop_name = "rotation"
         self.inputs.new('StringsSocket', "Scale").prop_name = "scale"
 
         self.outputs.new('VerticesSocket', "Verts", "Verts")
@@ -166,7 +161,7 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
             socket2 = self.inputs[1]
             socket2.replace_socket("StringsSocket", "Focal Length").prop_name = "focal_length"
 
-    def make_ellipse(self, a, b, N, phase, spin, scale):
+    def make_ellipse(self, a, b, N, phase, rotation, scale):
         verts = []
         edges = []
         polys = []
@@ -191,8 +186,8 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
             cx = 0
             cy = 0
 
-        sins = sin(spin) # cached for performance
-        coss = cos(spin) # cached for performance
+        sins = sin(rotation) # cached for performance
+        coss = cos(rotation) # cached for performance
 
         f1x = -cx - dx
         f1y = -cy - dy
@@ -203,22 +198,21 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
         f2xx = f2x * coss - f2y * sins
         f2yy = f2x * sins + f2y * coss
 
-        F1 = [f1xx, f1yy, 0]
-        F2 = [f2xx, f2yy, 0]
+        f1 = [f1xx, f1yy, 0]
+        f2 = [f2xx, f2yy, 0]
 
         for n in range(N):
             theta = 2 * pi * n / N + phase
             x = -cx + a * cos(theta)
             y = -cy + b * sin(theta)
-            z = 0
             xx = x * coss - y * sins
             yy = x * sins + y * coss
-            verts.append((xx, yy, z))
+            verts.append((xx, yy, 0))
 
         edges = list((i, (i + 1) % N) for i in range(N + 1))
         polys = [list(range(N))]
 
-        return verts, edges, polys, F1, F2
+        return verts, edges, polys, f1, f2
 
     def process(self):
         outputs = self.outputs
@@ -232,10 +226,10 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
         input_v2 = inputs[1].sv_get()[0]
         input_N = inputs["N"].sv_get()[0]
         input_P = inputs["Phase"].sv_get()[0]
-        input_S = inputs["Spin"].sv_get()[0]
-        input_s = inputs["Scale"].sv_get()[0]
+        input_R = inputs["Rotation"].sv_get()[0]
+        input_S = inputs["Scale"].sv_get()[0]
 
-        # convert input parameters to major/minor axis
+        # convert main input parameters to major/minor radii
         if self.mode == "AB":
             input_vv1 = input_v1  # a
             input_vv2 = input_v2  # b
@@ -245,35 +239,35 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
             input_vv2 = list(map(lambda a, e: a * sqrt(1 - e * e), input_va, input_ve))  # b = a * sqrt(1 - e*e)
         else:  # "AC"
             input_vv1 = input_v1  # a
-            input_va, input_vb = match_long_repeat([input_v1, input_v2])
-            input_vv2 = list(map(lambda a, b: sqrt(a * a - b * b), input_va, input_vb))  # c = sqrt(a*a - b*b)
+            input_va, input_vc = match_long_repeat([input_v1, input_v2])
+            input_vv2 = list(map(lambda a, c: sqrt(a * a - c * c), input_va, input_vc))  # b = sqrt(a*a - c*c)
 
         # sanitize the input
-        input_vv1 = list(map(lambda x: max(0.0, x), input_vv1))
-        input_vv2 = list(map(lambda x: max(0.0, x), input_vv2))
+        input_vv1 = list(map(lambda x: max(0.0, x), input_vv1)) # major radius
+        input_vv2 = list(map(lambda x: max(0.0, x), input_vv2)) # minor radius
         input_N = list(map(lambda x: max(3, int(x)), input_N))
 
-        parameters = match_long_repeat([input_vv1, input_vv2, input_N, input_P, input_S, input_s])
+        parameters = match_long_repeat([input_vv1, input_vv2, input_N, input_P, input_R, input_S])
 
         vertList = []
         edgeList = []
         polyList = []
-        F1List = []
-        F2List = []
-        for a, b, N, phase, spin, scale in zip(*parameters):
-            verts, edges, polys, F1, F2 = self.make_ellipse(a, b, N, phase, spin, scale)
+        f1List = []
+        f2List = []
+        for a, b, N, p, r, s in zip(*parameters):
+            verts, edges, polys, f1, f2 = self.make_ellipse(a, b, N, p, r, s)
             vertList.append(verts)
             edgeList.append(edges)
             polyList.append(polys)
-            F1List.append(F1)
-            F2List.append(F2)
+            f1List.append(f1)
+            f2List.append(f2)
 
         outputs["Verts"].sv_set(vertList)
         outputs["Edges"].sv_set(edgeList)
         outputs["Polys"].sv_set(polyList)
 
-        outputs["F1"].sv_set([F1List])
-        outputs["F2"].sv_set([F2List])
+        outputs["F1"].sv_set([f1List])
+        outputs["F2"].sv_set([f2List])
 
 
 def register():
