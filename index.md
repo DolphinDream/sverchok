@@ -16,6 +16,7 @@
     SvBoxNode
     SvCircleNode
     SvEllipseNode
+    SvOrbitNode
     CylinderNode
     SphereNode
     SvIcosphereNode
