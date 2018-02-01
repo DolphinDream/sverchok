@@ -15,8 +15,6 @@
     SvNGonNode
     SvBoxNode
     SvCircleNode
-    SvEllipseNode
-    SvOrbitNode
     CylinderNode
     SphereNode
     SvIcosphereNode
@@ -318,6 +316,7 @@
     SvSpiralNode
     SvExportGcodeNode
     SvCombinatoricsNode
+    SvOrbitNode
 
 ## Alpha Nodes
     SvCurveViewerNode
