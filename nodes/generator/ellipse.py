@@ -39,31 +39,31 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
         self.updating = True
 
         if self.mode == "AB":
-            if self.lastMode == "AE":
+            if self.lastMode == "AE":  # ae => ab
                 a = self.major_radius
                 e = self.eccentricity
                 self.minor_radius = a * sqrt(1 - e * e)
-            elif self.lastMode == "AC":
+            elif self.lastMode == "AC":  # ac => ab
                 a = self.major_radius
                 c = self.focal_length
                 self.minor_radius = sqrt(a * a - c * c)
 
         elif self.mode == "AE":
-            if self.lastMode == "AB":
+            if self.lastMode == "AB":  # ab => ae
                 a = self.major_radius
                 b = self.minor_radius
                 self.eccentricity = sqrt(1 - (b * b) / (a * a))
-            if self.lastMode == "AC":
+            if self.lastMode == "AC":  # ac => ae
                 a = self.major_radius
                 c = self.focal_length
                 self.eccentricity = c / a
 
         elif self.mode == "AC":
-            if self.lastMode == "AB":
+            if self.lastMode == "AB":  # ab => ac
                 a = self.major_radius
                 b = self.minor_radius
                 self.focal_length = sqrt(a * a - b * b)
-            if self.lastMode == "AE":
+            if self.lastMode == "AE":  # ae => ac
                 a = self.major_radius
                 e = self.eccentricity
                 self.focal_length = a * e
@@ -117,11 +117,11 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
         default=36, min=3, update=updateNode)
 
     phase = FloatProperty(
-        name='Phase', description='Phase ellipse points around its center by this radians amount',
+        name='Phase', description='Phase ellipse vertices around the center by this radians amount',
         default=0.0, update=updateNode)
 
     rotation = FloatProperty(
-        name='Rotation', description='Rotate ellipse points around the centering point by this radians amount',
+        name='Rotation', description='Rotate ellipse vertices around the centering point by this radians amount',
         default=0.0, update=updateNode)
 
     scale = FloatProperty(
@@ -134,7 +134,7 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
         self.width = 150
         self.inputs.new('StringsSocket', "Major Radius").prop_name = "major_radius"
         self.inputs.new('StringsSocket', "Minor Radius").prop_name = "minor_radius"
-        self.inputs.new('StringsSocket', "N", "N").prop_name = "num_verts"
+        self.inputs.new('StringsSocket', "Num Verts").prop_name = "num_verts"
         self.inputs.new('StringsSocket', "Phase").prop_name = "phase"
         self.inputs.new('StringsSocket', "Rotation").prop_name = "rotation"
         self.inputs.new('StringsSocket', "Scale").prop_name = "scale"
@@ -186,8 +186,8 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
             cx = 0
             cy = 0
 
-        sins = sin(rotation) # cached for performance
-        coss = cos(rotation) # cached for performance
+        sins = sin(rotation)  # cached for performance
+        coss = cos(rotation)  # cached for performance
 
         f1x = -cx - dx
         f1y = -cy - dy
@@ -224,30 +224,31 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
         inputs = self.inputs
         input_v1 = inputs[0].sv_get()[0]
         input_v2 = inputs[1].sv_get()[0]
-        input_N = inputs["N"].sv_get()[0]
-        input_P = inputs["Phase"].sv_get()[0]
-        input_R = inputs["Rotation"].sv_get()[0]
-        input_S = inputs["Scale"].sv_get()[0]
+        input_N = inputs["Num Verts"].sv_get()[0]
+        input_p = inputs["Phase"].sv_get()[0]
+        input_r = inputs["Rotation"].sv_get()[0]
+        input_s = inputs["Scale"].sv_get()[0]
 
         # convert main input parameters to major/minor radii
         if self.mode == "AB":
-            input_vv1 = input_v1  # a
-            input_vv2 = input_v2  # b
+            input_a, input_b = match_long_repeat([input_v1, input_v2])
+            input_a = list(map(lambda a: max(0.0, a), input_a))
+            input_b = list(map(lambda a, b: max(0.0, min(a, b)), input_a, input_b))
         elif self.mode == "AE":
-            input_vv1 = input_v1  # a
-            input_va, input_ve = match_long_repeat([input_v1, input_v2])
-            input_vv2 = list(map(lambda a, e: a * sqrt(1 - e * e), input_va, input_ve))  # b = a * sqrt(1 - e*e)
+            input_a, input_e = match_long_repeat([input_v1, input_v2])
+            input_a = list(map(lambda a: max(0.0, a), input_a))
+            input_e = list(map(lambda e: max(0.0, min(1.0, e)), input_e))
+            input_b = list(map(lambda a, e: a * sqrt(1 - e * e), input_a, input_e))
         else:  # "AC"
-            input_vv1 = input_v1  # a
-            input_va, input_vc = match_long_repeat([input_v1, input_v2])
-            input_vv2 = list(map(lambda a, c: sqrt(a * a - c * c), input_va, input_vc))  # b = sqrt(a*a - c*c)
+            input_a, input_c = match_long_repeat([input_v1, input_v2])
+            input_a = list(map(lambda a: max(0.0, a), input_a))
+            input_c = list(map(lambda a, c: max(0.0, min(a, c)), input_a, input_c))
+            input_b = list(map(lambda a, c: sqrt(a * a - c * c), input_a, input_c))
 
         # sanitize the input
-        input_vv1 = list(map(lambda x: max(0.0, x), input_vv1)) # major radius
-        input_vv2 = list(map(lambda x: max(0.0, x), input_vv2)) # minor radius
-        input_N = list(map(lambda x: max(3, int(x)), input_N))
+        input_N = list(map(lambda n: max(3, int(n)), input_N))
 
-        parameters = match_long_repeat([input_vv1, input_vv2, input_N, input_P, input_R, input_S])
+        parameters = match_long_repeat([input_a, input_b, input_N, input_p, input_r, input_s])
 
         vertList = []
         edgeList = []
