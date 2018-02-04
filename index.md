@@ -342,7 +342,7 @@
     SvUVtextureNode
     SvSeparateMeshNodeMK2
     SvIndexToMaskNode
-    SvMultiExtrudeAlt
+    Alt
     SvOffsetLineNode
     SvContourNode
     SvPlanarEdgenetToPolygons
@@ -350,3 +350,6 @@
     SvQuaternionOutNode
     SvQuaternionInNode
     SvQuaternionMathNode
+    ---
+    SvCycloidNode
+
