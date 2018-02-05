@@ -24,9 +24,7 @@ from sverchok.data_structure import (match_long_repeat, updateNode)
 
 from math import sin, cos, pi, sqrt
 
-centeringItems = [("F1", "F1", ""), ("C", "C", ""), ("F2", "F2", "")]
-# directionItems = [("X", "X", ""), ("Y", "Y", ""), ("Z", "Z", "")]
-
+centeringItems = [("P1", "P1", ""), ("P2", "P2", "")]
 
 class SvCycloidNode(bpy.types.Node, SverchCustomTreeNode):
     ''' Cycloid '''
@@ -36,8 +34,8 @@ class SvCycloidNode(bpy.types.Node, SverchCustomTreeNode):
 
     centering = EnumProperty(
         name="Centering", items=centeringItems,
-        description="Center the ellipse around F1, C or F2",
-        default="C", update=updateNode)
+        description="Center the ellipse around P1 or P2",
+        default="P1", update=updateNode)
 
     radius1 = FloatProperty(
         name='Radius1', description='Radius1',
@@ -93,10 +91,15 @@ class SvCycloidNode(bpy.types.Node, SverchCustomTreeNode):
         edges = []
 
         for n in range(N):
-            a1 = 2 * pi * n / N * (T + T1 * O1) / T1
-            a2 = 2 * pi * n / N * (T + T2 * O2) / T2
-            x = R1 * cos(a1) + R2 * cos(a2)
-            y = R1 * sin(a1) + R2 * sin(a2)
+            t = T * n / N
+            a1 = 2 * pi * (t + T1 * O1) / T1
+            a2 = 2 * pi * (t + T2 * O2) / T2
+            if self.centering == "P1":
+                x = R2 * cos(a2) - R1 * cos(a1)
+                y = R2 * sin(a2) - R1 * sin(a1)
+            else:
+                x = R1 * cos(a1) - R2 * cos(a2)
+                y = R1 * sin(a1) - R2 * sin(a2)
             z = 0
             verts.append([x, y, z])
 
@@ -122,7 +125,7 @@ class SvCycloidNode(bpy.types.Node, SverchCustomTreeNode):
         input_T = inputs["T"].sv_get()[0]
         input_N = inputs["N"].sv_get()[0]
 
-        # sanitize the input
+        # sanitize the inputs
         input_R1 = list(map(lambda x: max(0.0, x), input_R1))
         input_R2 = list(map(lambda x: max(0.0, x), input_R2))
         input_T1 = list(map(lambda x: max(0.0, x), input_T1))
