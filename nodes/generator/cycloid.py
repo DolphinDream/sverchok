@@ -34,7 +34,7 @@ class SvCycloidNode(bpy.types.Node, SverchCustomTreeNode):
 
     centering = EnumProperty(
         name="Centering", items=centeringItems,
-        description="Center the ellipse around P1 or P2",
+        description="Center the path around P1 or P2",
         default="P1", update=updateNode)
 
     radius1 = FloatProperty(
