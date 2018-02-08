@@ -23,8 +23,10 @@ from sverchok.node_tree import SverchCustomTreeNode
 from sverchok.data_structure import (match_long_repeat, updateNode)
 
 from math import sin, cos, pi, sqrt
+import time
 
 centeringItems = [("P1", "P1", ""), ("P2", "P2", "")]
+
 
 class SvCycloidNode(bpy.types.Node, SverchCustomTreeNode):
     ''' Cycloid '''
@@ -90,16 +92,22 @@ class SvCycloidNode(bpy.types.Node, SverchCustomTreeNode):
         verts = []
         edges = []
 
+        if self.centering == "P2":  # swap values
+            R1, R2 = R2, R1
+            T1, T2 = T2, T1
+            O1, O2 = O2, O1
+
+        dT = T / N
+        dA1 = 2 * pi / T1
+        dA2 = 2 * pi / T2
+        o1 = T1 * O1
+        o2 = T2 * O2
         for n in range(N):
-            t = T * n / N
-            a1 = 2 * pi * (t + T1 * O1) / T1
-            a2 = 2 * pi * (t + T2 * O2) / T2
-            if self.centering == "P1":
-                x = R2 * cos(a2) - R1 * cos(a1)
-                y = R2 * sin(a2) - R1 * sin(a1)
-            else:
-                x = R1 * cos(a1) - R2 * cos(a2)
-                y = R1 * sin(a1) - R2 * sin(a2)
+            t = n * dT
+            a1 = (t + o1) * dA1
+            a2 = (t + o2) * dA2
+            x = R2 * cos(a2) - R1 * cos(a1)
+            y = R2 * sin(a2) - R1 * sin(a1)
             z = 0
             verts.append([x, y, z])
 
@@ -109,6 +117,8 @@ class SvCycloidNode(bpy.types.Node, SverchCustomTreeNode):
         return verts, edges
 
     def process(self):
+        t0 = time.time()
+
         outputs = self.outputs
         # return if no outputs are connected
         if not any(s.is_linked for s in outputs):
@@ -125,6 +135,8 @@ class SvCycloidNode(bpy.types.Node, SverchCustomTreeNode):
         input_T = inputs["T"].sv_get()[0]
         input_N = inputs["N"].sv_get()[0]
 
+        t1 = time.time()
+
         # sanitize the inputs
         input_R1 = list(map(lambda x: max(0.0, x), input_R1))
         input_R2 = list(map(lambda x: max(0.0, x), input_R2))
@@ -135,7 +147,11 @@ class SvCycloidNode(bpy.types.Node, SverchCustomTreeNode):
         input_T = list(map(lambda x: max(0.0, x), input_T))
         input_N = list(map(lambda x: max(3, int(x)), input_N))
 
+        t2 = time.time()
+
         parameters = match_long_repeat([input_R1, input_R2, input_T1, input_T2, input_O1, input_O2, input_T, input_N])
+
+        t3 = time.time()
 
         vertList = []
         edgeList = []
@@ -144,8 +160,19 @@ class SvCycloidNode(bpy.types.Node, SverchCustomTreeNode):
             vertList.append(verts)
             edgeList.append(edges)
 
+        t4 = time.time()
+
         outputs["Verts"].sv_set(vertList)
         outputs["Edges"].sv_set(edgeList)
+
+        t5 = time.time()
+
+        print("Time Statistics:")
+        print("dT1 = ", t2 - t1)
+        print("dT2 = ", t3 - t2)
+        print("dT3 = ", t4 - t3)
+        print("dT4 = ", t5 - t4)
+        print("dT = ", t5 - t0)
 
 
 def register():
