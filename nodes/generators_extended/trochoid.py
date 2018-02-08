@@ -26,8 +26,6 @@ from math import sin, cos, pi, sqrt
 
 typeItems = [("HYPO", "Hypo", ""), ("LINE", "Line", ""), ("EPI", "Epi", "")]
 
-centeringItems = [("P1", "P1", ""), ("P2", "P2", "")]
-
 
 class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
     ''' Trochoid '''
@@ -40,22 +38,17 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         description="Type of trochoid: Hypo, Line & Epi",
         default="EPI", update=updateNode)
 
-    centering = EnumProperty(
-        name="Centering", items=centeringItems,
-        description="Center the path around P1 or P2",
-        default="P1", update=updateNode)
-
     radius1 = FloatProperty(
         name='Radius1', description='Radius1',
         default=6.0, min=0.0, update=updateNode)
 
     radius2 = FloatProperty(
         name='Radius2', description='Radius2',
-        default=5.0, min=0.0, update=updateNode)
+        default=1.0, min=0.0, update=updateNode)
 
     height = FloatProperty(
         name='Height', description='Height',
-        default=1.0, min=0.0, update=updateNode)
+        default=5.0, min=0.0, update=updateNode)
 
     offset1 = FloatProperty(
         name='Offset1', description='Offset1',
@@ -67,7 +60,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
 
     time = FloatProperty(
         name='Time', description='Time',
-        default=11.0, min=0.0, update=updateNode)
+        default=1.0, min=0.0, update=updateNode)
 
     closed = BoolProperty(
         name='Closed', description='Closed',
@@ -101,45 +94,41 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         row = col.row(align=True)
         row.prop(self, "closed", toggle=True)
         row.prop(self, "swap", toggle=True)
-        # layout.prop(self, "centering", expand=True)
 
     def make_trochoid(self, R1, R2, H, O1, O2, T, N):
         verts = []
         edges = []
 
-        if self.swap:
-            a = R2
-            b = R1
-        else:
-            a = R1
-            b = R2
+        a, b = [R2, R1] if self.swap else [R1, R2]
 
-        O1 = O1 * 2 * pi
-        O2 = O2 * 2 * pi
+        # cache here for performance
+        o1 = 2 * pi * O1
+        o2 = 2 * pi * O2
+        R = a + b  # outer radius
+        r = a - b  # inner radius
+        Rb = R / b  # outer "gear ratio"
+        rb = r / b  # inner "gear ratio"
 
-        if self.tType == "HYPO":
-            fx = lambda t: (a + b) * cos(t + O1) - H * cos((a + b) / b * t + O2)
-            fy = lambda t: (a + b) * sin(t + O1) - H * sin((a + b) / b * t + O2)
-        elif self.tType == "EPI":
-            fx = lambda t: (a - b) * cos(t + O1) + H * cos((a - b) / b * t + O2)
-            fy = lambda t: (a - b) * sin(t + O1) - H * sin((a - b) / b * t + O2)
-        else:
-            fx = lambda t: a * t - b * sin(t)
-            fy = lambda t: a - b * cos(t)
+        if self.tType == "EPI":
+            fx = lambda t: R * cos(t + o1) - H * cos(Rb * t + o2)
+            fy = lambda t: R * sin(t + o1) - H * sin(Rb * t + o2)
+        elif self.tType == "HYPO":
+            fx = lambda t: r * cos(t + o1) + H * cos(rb * t + o2)
+            fy = lambda t: r * sin(t + o1) - H * sin(rb * t + o2)
+        else:  # LINE
+            fx = lambda t: a * t - H * sin(t)
+            fy = lambda t: a - H * cos(t)
 
         dT = 2 * pi * T / N
 
         for n in range(N):
             t = n * dT
-            x = fx(t)
-            y = fy(t)
-            z = 0
-            verts.append([x, y, z])
+            verts.append([fx(t), fy(t), 0])
 
-        edges = list([i, i + 1] for i in range(N-1))
+        edges = list([i, i + 1] for i in range(N - 1))
 
         if self.closed:
-            edges.append([N-1, 0])
+            edges.append([N - 1, 0])
 
         return verts, edges
 
