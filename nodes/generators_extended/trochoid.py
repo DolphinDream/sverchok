@@ -24,7 +24,7 @@ from sverchok.data_structure import (match_long_repeat, updateNode)
 
 from math import sin, cos, pi, sqrt
 
-typeItems = [("H", "Hypo", ""), ("L", "Line", ""), ("E", "Epi", "")]
+typeItems = [("HYPO", "Hypo", ""), ("LINE", "Line", ""), ("EPI", "Epi", "")]
 
 centeringItems = [("P1", "P1", ""), ("P2", "P2", "")]
 
@@ -37,8 +37,8 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
 
     tType = EnumProperty(
         name="Type", items=typeItems,
-        description="Type of trochoid Epi, Hypo",
-        default="E", update=updateNode)
+        description="Type of trochoid: Hypo, Line & Epi",
+        default="EPI", update=updateNode)
 
     centering = EnumProperty(
         name="Centering", items=centeringItems,
@@ -47,11 +47,11 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
 
     radius1 = FloatProperty(
         name='Radius1', description='Radius1',
-        default=3.0, min=0.0, update=updateNode)
+        default=6.0, min=0.0, update=updateNode)
 
     radius2 = FloatProperty(
         name='Radius2', description='Radius2',
-        default=2.0, min=0.0, update=updateNode)
+        default=5.0, min=0.0, update=updateNode)
 
     height = FloatProperty(
         name='Height', description='Height',
@@ -84,7 +84,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
     def sv_init(self, context):
         self.width = 150
         self.inputs.new('StringsSocket', "R1", "R1").prop_name = "radius1"
-        self.inputs.new('StringsSocket', "R2", "R2").prop_name = "radius2"
+        self.inputs.new('StringsSocket', "R2",  "R2").prop_name = "radius2"
         self.inputs.new('StringsSocket', "H", "H").prop_name = "height"
         self.inputs.new('StringsSocket', "O1", "O1").prop_name = "offset1"
         self.inputs.new('StringsSocket', "O2", "O2").prop_name = "offset2"
@@ -117,17 +117,22 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         O1 = O1 * 2 * pi
         O2 = O2 * 2 * pi
 
+        if self.tType == "HYPO":
+            fx = lambda t: (a + b) * cos(t + O1) - H * cos((a + b) / b * t + O2)
+            fy = lambda t: (a + b) * sin(t + O1) - H * sin((a + b) / b * t + O2)
+        elif self.tType == "EPI":
+            fx = lambda t: (a - b) * cos(t + O1) + H * cos((a - b) / b * t + O2)
+            fy = lambda t: (a - b) * sin(t + O1) - H * sin((a - b) / b * t + O2)
+        else:
+            fx = lambda t: a * t - b * sin(t)
+            fy = lambda t: a - b * cos(t)
+
+        dT = 2 * pi * T / N
+
         for n in range(N):
-            t = 2 * pi * T * n / N
-            if self.tType == "E":  # EPI
-                x = (a + b) * cos(t + O1) - H * cos((a + b) / b * t + O2)
-                y = (a + b) * sin(t + O1) - H * sin((a + b) / b * t + O2)
-            elif self.tType == "H":  # HYPO
-                x = (a - b) * cos(t + O1) + H * cos((a - b) / b * t + O2)
-                y = (a - b) * sin(t + O1) - H * sin((a - b) / b * t + O2)
-            else: # LINE
-                x = a * t - b * sin(t)
-                y = a - b * cos(t)
+            t = n * dT
+            x = fx(t)
+            y = fy(t)
             z = 0
             verts.append([x, y, z])
 
