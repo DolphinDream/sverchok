@@ -350,3 +350,5 @@
     SvQuaternionOutNode
     SvQuaternionInNode
     SvQuaternionMathNode
+    ---
+    SvTrochoidNode
