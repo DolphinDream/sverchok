@@ -26,8 +26,9 @@ from math import sin, cos, pi
 
 typeItems = [("HYPO", "Hypo", ""), ("LINE", "Line", ""), ("EPI", "Epi", "")]
 
-# name : [ type, r1, r2, height, phase1, phase2, turns, resolution ]
+# name : [ type, r1, r2, height, phase1, phase2, turns, resolution, scale]
 trochoidPresets = {
+    # some common shapes
     " ":            ["", 0.0, 0.0, 0.0, 0, 0, 0.0, 0.0, 1.0],
     "CYCLOID":      ["LINE", 1.0, 1.0, 1.0, 0.0, 0.0, 2.0, 200, 1.0],
     "CARDIOID":     ["EPI", 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0],
@@ -35,7 +36,7 @@ trochoidPresets = {
     "RANUNCULOID":  ["EPI", 5.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0],
     "DELTOID":      ["HYPO", 3.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0],
     "ASTROID":      ["HYPO", 4.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0],
-    # and some interesting ones
+    # other interesting ones
     "E6":           ["EPI", 6.0, 1.0, 5.0, 0.0, 0.0, 1.0, 300, 0.5],
     "H5":           ["HYPO", 4.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0],
 
@@ -147,6 +148,16 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         row.prop(self, "swap", toggle=True)
 
     def make_trochoid(self, R1, R2, H, P1, P2, T, N, S):
+        '''
+            R1 : radius of the static circle
+            R2 : radius of the rolling circle
+            H  : distance from drawing point to the center of the rolling circle
+            P1 : starting angle for the static circle (phase1)
+            P2 : starting angle for the rolling circle (phase2)
+            T  : number of turns around the static circle
+            N  : number of vertices per turn (turn resolution)
+            S  : scale of the main parameters (radii & height)
+        '''
         verts = []
         edges = []
 
@@ -167,9 +178,10 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
             fx = lambda t: r * cos(t + P1) + h * cos(rb * t + P2)
             fy = lambda t: r * sin(t + P1) - h * sin(rb * t + P2)
         else:  # LINE
-            fx = lambda t: a * t - H * sin(t + P1)
-            fy = lambda t: a - H * cos(t + P1)
+            fx = lambda t: b * t - h * sin(t + P1)
+            fy = lambda t: b - h * cos(t + P1)
 
+        N = max(3, int(T * N)) # total number of points in the path
         dT = 2 * pi * T / N
 
         for n in range(N):
@@ -213,7 +225,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         vertList = []
         edgeList = []
         for R1, R2, H, P1, P2, T, N, S in zip(*parameters):
-            verts, edges = self.make_trochoid(R1, R2, H, P1, P2, T, 1 + int(N * T), S)
+            verts, edges = self.make_trochoid(R1, R2, H, P1, P2, T, N, S)
             vertList.append(verts)
             edgeList.append(edges)
 

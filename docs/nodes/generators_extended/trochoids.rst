@@ -33,4 +33,5 @@ interesting settings (epi + hypo):
 12 2 11
 13 6 12
 6 11 13
+11 3 10
 
