@@ -151,7 +151,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         '''
             R1 : radius of the static circle
             R2 : radius of the rolling circle
-            H  : distance from drawing point to the center of the rolling circle
+            H  : distance from the point to the center of the rolling circle
             P1 : starting angle for the static circle (phase1)
             P2 : starting angle for the rolling circle (phase2)
             T  : number of turns around the static circle
@@ -184,11 +184,12 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         N = max(3, int(T * N)) # total number of points in the path
         dT = 2 * pi * T / N
 
-        for n in range(N):
+        for n in range(N+1):
             t = n * dT
             verts.append([fx(t), fy(t), 0])
 
-        edges = list([i, i + 1] for i in range(N - 1))
+        edges = list([i, i + 1] for i in range(N))
+        # edges = list([i, i + 1] for i in range(N - 1))
 
         if self.closed:
             edges.append([N - 1, 0])
