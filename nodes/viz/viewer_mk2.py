@@ -19,7 +19,7 @@
 import bpy
 from bpy.props import (
     BoolProperty, StringProperty, IntProperty,
-    FloatProperty, FloatVectorProperty)
+    FloatProperty, FloatVectorProperty, BoolVectorProperty)
 
 from mathutils import Matrix
 
@@ -250,6 +250,12 @@ class ViewerNode2(bpy.types.Node, SverchCustomTreeNode):
         default=False,
         description='Allows mesh.transform(matrix) operation, quite fast!')
 
+    layer_choice = BoolVectorProperty(
+        subtype='LAYER', size=20,
+        default=[True] * 20,
+        update=updateNode,
+        description="This sets which layer drawing is visible on")
+
     def sv_init(self, context):
         self.inputs.new('VerticesSocket', 'vertices', 'vertices')
         self.inputs.new('StringsSocket', 'edg_pol', 'edg_pol')
@@ -324,6 +330,9 @@ class ViewerNode2(bpy.types.Node, SverchCustomTreeNode):
         layout.prop(self, 'callback_timings')
         self.draw_main_ui_elements(context, layout)
 
+        layout.prop(self, 'layer_choice', text='Layers')
+
+
     # reset n_id on duplicate (shift-d)
     def copy(self, node):
         self.n_id = ''
@@ -341,6 +350,15 @@ class ViewerNode2(bpy.types.Node, SverchCustomTreeNode):
 
     def process(self):
         if not (self.id_data.sv_show and self.activate):
+            callback_disable(node_id(self))
+            return
+
+        # draw only if a VD layer is also a visible layer
+        layers = bpy.context.scene.layers
+        for i in range(len(layers)):
+            if layers[i] and self.layer_choice[i]:
+                break
+        else:
             callback_disable(node_id(self))
             return
 
