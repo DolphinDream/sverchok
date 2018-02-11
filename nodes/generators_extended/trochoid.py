@@ -87,11 +87,11 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         default=6.0, min=0.0, update=updateNode)
 
     radius2 = FloatProperty(
-        name='Radius2', description='Radius of the rolling circle',
+        name='Radius2', description='Radius of the moving circle',
         default=1.0, min=0.0, update=updateNode)
 
     height = FloatProperty(
-        name='Height', description='Distance from the center of the rolling circle to the moving point',
+        name='Height', description='Distance from the center of the moving circle to the moving point',
         default=5.0, min=0.0, update=updateNode)
 
     phase1 = FloatProperty(
@@ -99,11 +99,19 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         default=0.0, update=updateNode)
 
     phase2 = FloatProperty(
-        name='Phase2', description='Starting angle for the rolling circle (in radians)',
+        name='Phase2', description='Starting angle for the moving circle (in radians)',
         default=0.0, update=updateNode)
 
     turns = FloatProperty(
         name='Turns', description='Number of turns around the static circle',
+        default=1.0, min=0.0, update=updateNode)
+
+    resolution = IntProperty(
+        name='Resolution', description='Number of vertices per one turn around the static circle',
+        default=200, min=3, update=updateNode)
+
+    scale = FloatProperty(
+        name='Scale', description='Scale main parameters: radii and height',
         default=1.0, min=0.0, update=updateNode)
 
     closed = BoolProperty(
@@ -113,14 +121,6 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
     swap = BoolProperty(
         name='Swap', description='Swap',
         default=False, update=updateNode)
-
-    resolution = IntProperty(
-        name='Turn Resolution', description='Number of vertices per turn',
-        default=100, min=3, update=updateNode)
-
-    scale = FloatProperty(
-        name='Scale', description='Scale radii',
-        default=1.0, min=0.0, update=updateNode)
 
     updating = BoolProperty(default=False)  # used for disabling update callback
 
@@ -150,10 +150,10 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
     def make_trochoid(self, R1, R2, H, P1, P2, T, N, S):
         '''
             R1 : radius of the static circle
-            R2 : radius of the rolling circle
-            H  : distance from the point to the center of the rolling circle
+            R2 : radius of the moving circle
+            H  : distance from the point to the center of the moving circle
             P1 : starting angle for the static circle (phase1)
-            P2 : starting angle for the rolling circle (phase2)
+            P2 : starting angle for the moving circle (phase2)
             T  : number of turns around the static circle
             N  : number of vertices per turn (turn resolution)
             S  : scale of the main parameters (radii & height)
@@ -181,7 +181,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
             fx = lambda t: b * t - h * sin(t + P1)
             fy = lambda t: b - h * cos(t + P1)
 
-        N = max(3, int(T * N)) # total number of points in the path
+        N = max(3, int(T * N)) # total number of points in all turns
         dT = 2 * pi * T / N
 
         for n in range(N+1):
@@ -189,7 +189,6 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
             verts.append([fx(t), fy(t), 0])
 
         edges = list([i, i + 1] for i in range(N))
-        # edges = list([i, i + 1] for i in range(N - 1))
 
         if self.closed:
             edges.append([N - 1, 0])
