@@ -352,3 +352,4 @@
     SvQuaternionMathNode
     ---
     SvTrochoidNode
+    SvVDMK2LayerNode
