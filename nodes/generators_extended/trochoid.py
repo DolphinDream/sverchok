@@ -49,6 +49,13 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
     bl_label = 'Trochoid'
     bl_icon = 'OUTLINER_OB_EMPTY'
 
+    def update_trochoid(self, context):
+        if self.updating:
+            return
+
+        self.presets = " "
+        updateNode(self, context)
+
     def update_presets(self, context):
         self.updating = True
 
@@ -66,6 +73,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         self.turns = T
         self.resolution = N
         self.scale = S
+        self.swap = False
         self.closed = False if self.tType == "LINE" else True
 
         self.updating = False
@@ -80,47 +88,47 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
     tType = EnumProperty(
         name="Type", items=typeItems,
         description="Type of trochoid: Hypo, Line & Epi",
-        default="EPI", update=updateNode)
+        default="EPI", update=update_trochoid)
 
     radius1 = FloatProperty(
         name='Radius1', description='Radius of the static circle',
-        default=6.0, min=0.0, update=updateNode)
+        default=6.0, min=0.0, update=update_trochoid)
 
     radius2 = FloatProperty(
         name='Radius2', description='Radius of the moving circle',
-        default=1.0, min=0.0, update=updateNode)
+        default=1.0, min=0.0, update=update_trochoid)
 
     height = FloatProperty(
         name='Height', description='Distance from the center of the moving circle to the moving point',
-        default=5.0, min=0.0, update=updateNode)
+        default=5.0, min=0.0, update=update_trochoid)
 
     phase1 = FloatProperty(
         name='Phase1', description='Starting angle for the static circle (in radians)',
-        default=0.0, update=updateNode)
+        default=0.0, update=update_trochoid)
 
     phase2 = FloatProperty(
         name='Phase2', description='Starting angle for the moving circle (in radians)',
-        default=0.0, update=updateNode)
+        default=0.0, update=update_trochoid)
 
     turns = FloatProperty(
         name='Turns', description='Number of turns around the static circle',
-        default=1.0, min=0.0, update=updateNode)
+        default=1.0, min=0.0, update=update_trochoid)
 
     resolution = IntProperty(
         name='Resolution', description='Number of vertices per one turn around the static circle',
-        default=200, min=3, update=updateNode)
+        default=200, min=3, update=update_trochoid)
 
     scale = FloatProperty(
         name='Scale', description='Scale main parameters: radii and height',
-        default=1.0, min=0.0, update=updateNode)
+        default=1.0, min=0.0, update=update_trochoid)
 
     closed = BoolProperty(
         name='Closed', description='Closed',
-        default=False, update=updateNode)
+        default=False, update=update_trochoid)
 
     swap = BoolProperty(
         name='Swap', description='Swap',
-        default=False, update=updateNode)
+        default=False, update=update_trochoid)
 
     updating = BoolProperty(default=False)  # used for disabling update callback
 
@@ -181,10 +189,10 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
             fx = lambda t: b * t - h * sin(t + P1)
             fy = lambda t: b - h * cos(t + P1)
 
-        N = max(3, int(T * N)) # total number of points in all turns
+        N = max(3, int(T * N))  # total number of points in all turns
         dT = 2 * pi * T / N
 
-        for n in range(N+1):
+        for n in range(N + 1):
             t = n * dT
             verts.append([fx(t), fy(t), 0])
 
