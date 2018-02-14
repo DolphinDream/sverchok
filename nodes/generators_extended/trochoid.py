@@ -26,20 +26,39 @@ from math import sin, cos, pi
 
 typeItems = [("HYPO", "Hypo", ""), ("LINE", "Line", ""), ("EPI", "Epi", "")]
 
-# name : [ type, r1, r2, height, phase1, phase2, turns, resolution, scale]
+# name : [ preset index, type, r1, r2, height, phase1, phase2, turns, resolution, scale ]
 trochoidPresets = {
     # some common shapes
-    " ":            ["", 0.0, 0.0, 0.0, 0, 0, 0.0, 0.0, 1.0],
-    "CYCLOID":      ["LINE", 1.0, 1.0, 1.0, 0.0, 0.0, 2.0, 200, 1.0],
-    "CARDIOID":     ["EPI", 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0],
-    "NEPHROID":     ["EPI", 2.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0],
-    "RANUNCULOID":  ["EPI", 5.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0],
-    "DELTOID":      ["HYPO", 3.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0],
-    "ASTROID":      ["HYPO", 4.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0],
-    # other interesting ones
-    "E6":           ["EPI", 6.0, 1.0, 5.0, 0.0, 0.0, 1.0, 300, 0.5],
-    "H5":           ["HYPO", 4.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0],
-
+    " ":               (0, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 1.0),
+    # LINE
+    "CYCLOID":         (10, "LINE", 1.0, 1.0, 1.0, 0.0, 0.0, 2.0, 200, 0.1),
+    "CYCLOID C":       (11, "LINE", 1.0, 1.0, 0.5, 0.0, 0.0, 2.0, 200, 0.1),
+    "CYCLOID P":       (12, "LINE", 1.0, 1.0, 2.0, 0.0, 0.0, 2.0, 200, 0.1),
+    "EPI CYCLOID":     (13, "EPI", 7.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.5),
+    "EPI CYCLOID C":   (14, "EPI", 7.0, 1.0, 0.5, 0.0, 0.0, 1.0, 200, 0.5),
+    "EPI CYCLOID P":   (15, "EPI", 7.0, 1.0, 2.0, 0.0, 0.0, 1.0, 200, 0.5),
+    "HYPO CYCLOID":    (16, "HYPO", 7.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.5),
+    "HYPO CYCLOID C":  (17, "HYPO", 7.0, 1.0, 0.5, 0.0, 0.0, 1.0, 200, 0.5),
+    "HYPO CYCLOID P":  (18, "HYPO", 7.0, 1.0, 2.0, 0.0, 0.0, 1.0, 200, 0.5),
+    # EPI
+    "CARDIOID":        (20, "EPI", 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0),
+    "NEPHROID":        (21, "EPI", 2.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0),
+    "RANUNCULOID":     (22, "EPI", 5.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.5),
+    # HYPO
+    "DELTOID":         (30, "HYPO", 3.0, 1.0, 1.0, 0.0, 0.0, 1.0, 300, 1.0),
+    "ASTROID":         (31, "HYPO", 4.0, 1.0, 1.0, 0.0, 0.0, 1.0, 300, 0.5),
+    # other somewhat interesting EPIs
+    "E 6-1-5":         (100, "EPI", 6.0, 1.0, 5.0, 0.0, 0.0, 1.0, 300, 0.2),
+    "E 6-3-1":         (101, "EPI", 6.0, 3.0, 1.0, 0.0, 0.0, 1.0, 200, 0.2),
+    "E 10-1-9":        (102, "EPI", 10.0, 1.0, 9.0, 0.0, 0.0, 1.0, 500, 0.1),
+    "E 12-7-11":       (103, "EPI", 12.0, 7.0, 11.0, 0.0, 0.0, 7.0, 500, 0.1),
+    "E 7-2-2":         (104, "EPI", 7.0, 2.0, 2.0, 0.0, 0.0, 2.0, 300, 0.2),
+    # other somewhat interesting HYPOs
+    "H 6-1-4":         (200, "HYPO", 6.0, 1.0, 4.0, 0.0, 0.0, 1.0, 500, 0.2),
+    "H 10-1-9":        (201, "HYPO", 10.0, 1.0, 9.0, 0.0, 0.0, 1.0, 500, 0.1),
+    "H 13-6-12":       (202, "HYPO", 13.0, 6.0, 12.0, 0.0, 0.0, 6.0, 200, 0.1),
+    "H 1-5-2":         (203, "HYPO", 1.0, 5.0, 2.0, 0.0, 0.0, 5.0, 200, 0.3),
+    "H 6-10-5":        (204, "HYPO", 6.0, 10.0, 5.0, 0.0, 0.0, 10.0, 100, 0.3),
 }
 
 
@@ -56,6 +75,9 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         self.presets = " "
         updateNode(self, context)
 
+    def preset_items(self, context):
+        return [(k, k.title(), "", "", s[0]) for k, s in sorted(trochoidPresets.items(), key=lambda k: k[1][0])]
+
     def update_presets(self, context):
         self.updating = True
 
@@ -63,7 +85,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
             self.updating = False
             return
 
-        tt, r1, r2, h, p1, p2, T, N, S = trochoidPresets[self.presets]
+        _, tt, r1, r2, h, p1, p2, T, N, S = trochoidPresets[self.presets]
         self.tType = tt
         self.radius1 = r1
         self.radius2 = r2
@@ -79,15 +101,13 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         self.updating = False
         updateNode(self, context)
 
-    presetItems = [(k, k.title(), "", "", i) for i, (k, v) in enumerate(sorted(trochoidPresets.items()))]
-
     presets = EnumProperty(
-        name="Presets", items=presetItems,
+        name="Presets", items=preset_items,
         update=update_presets)
 
     tType = EnumProperty(
         name="Type", items=typeItems,
-        description="Type of trochoid: Hypo, Line & Epi",
+        description="Type of the trochoid: HYPO, LINE & EPI",
         default="EPI", update=update_trochoid)
 
     radius1 = FloatProperty(
@@ -99,15 +119,16 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         default=1.0, min=0.0, update=update_trochoid)
 
     height = FloatProperty(
-        name='Height', description='Distance from the center of the moving circle to the moving point',
+        name='Height',
+        description='Distance from drawing point to the center of the moving circle',
         default=5.0, min=0.0, update=update_trochoid)
 
     phase1 = FloatProperty(
-        name='Phase1', description='Starting angle for the static circle (in radians)',
+        name='Phase1', description='Starting angle for the static circle (radians)',
         default=0.0, update=update_trochoid)
 
     phase2 = FloatProperty(
-        name='Phase2', description='Starting angle for the moving circle (in radians)',
+        name='Phase2', description='Starting angle for the moving circle (radians)',
         default=0.0, update=update_trochoid)
 
     turns = FloatProperty(
@@ -115,20 +136,29 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         default=1.0, min=0.0, update=update_trochoid)
 
     resolution = IntProperty(
-        name='Resolution', description='Number of vertices per one turn around the static circle',
+        name='Resolution',
+        description='Number of vertices in one full turn around the static circle',
         default=200, min=3, update=update_trochoid)
 
     scale = FloatProperty(
-        name='Scale', description='Scale main parameters: radii and height',
+        name='Scale', description='Scale of the main parameters: radii and height',
         default=1.0, min=0.0, update=update_trochoid)
 
     closed = BoolProperty(
-        name='Closed', description='Closed',
+        name='Closed', description='Close the line',
         default=False, update=update_trochoid)
 
     swap = BoolProperty(
-        name='Swap', description='Swap',
+        name='Swap', description='Swap radii and phases: R1<->R2 and P1<->P2',
         default=False, update=update_trochoid)
+
+    normalize = BoolProperty(
+        name='Normalize', description='Scale the curve to fit within normalized size',
+        default=False, update=updateNode)
+
+    normalize_size = FloatProperty(
+        name='Normalized size', description='Normalized size of the curve',
+        default=2.0, min=0.0, update=update_trochoid)
 
     updating = BoolProperty(default=False)  # used for disabling update callback
 
@@ -155,6 +185,10 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         row.prop(self, "closed", toggle=True)
         row.prop(self, "swap", toggle=True)
 
+    def draw_buttons_ext(self, context, layout):
+        layout.prop(self, 'normalize')
+        layout.prop(self, 'normalize_size')
+
     def make_trochoid(self, R1, R2, H, P1, P2, T, N, S):
         '''
             R1 : radius of the static circle
@@ -163,13 +197,21 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
             P1 : starting angle for the static circle (phase1)
             P2 : starting angle for the moving circle (phase2)
             T  : number of turns around the static circle
-            N  : number of vertices per turn (turn resolution)
-            S  : scale of the main parameters (radii & height)
+            N  : number of vertices in one full turn around the static circle (turn resolution)
+            S  : scale the main parameters (radii & height)
         '''
         verts = []
         edges = []
 
         a, b = [R2, R1] if self.swap else [R1, R2]
+
+        if self.normalize:
+            if self.tType == "EPI":
+                S = 1/(abs(a+b)+H) * self.normalize_size
+            elif self.tType == "HYPO":
+                S = 1/(abs(a-b)+H) * self.normalize_size
+            else:
+                S = 1/(2*pi*a+H) * self.normalize_size
 
         a = a * S
         b = b * S

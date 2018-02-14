@@ -112,27 +112,47 @@ These are the vertices and edges of the trochoid curves.
 Example of usage
 ----------------
 
-
 interesting settings (epi + hypo):
-6 3 1
-10 1 9
+
+* 6 3 1
+* 10 1 9
+* 6 1 5
+* 12 7 11
+* 6 1 4
+* 7 2 2
+* 13 6 12
+* 1 5 2
+* 6 10 5 H
+
 6 2 5
-6 1 5
 2 1 1
-12 7 11
 13 12 12
 6 1 13
 10 3 9
 12 3 11
 12 2 11
-13 6 12
 6 11 13
 11 3 10
 5 2 4
 7 5 10
 8 2 2
 7 6 6
-6 1 4
-7 2 2
 9 1 8
 12 2 11
+
+
+└── Trochoids
+    ├── Linear Trochoids (moving circle on straight line)
+    │   ├── Common Cycloid  (H = R2)
+    │   ├── Curtate Cycloid (H < R2)
+    │   └── Prolate Cycloid (H > R2)
+    ├── EpiTrochoids (moving circle on outside static circle)
+    │   ├── Common EpiCycloids  (H = R2)
+    │   ├── Curtate EpiCycloids (H < R2)
+    │   └── Prolate EpiCycloids (H > R2)
+    └── HypoTrochoids (moving circle on inside static circle)
+        ├── Common HypoCycloids  (H = R2)
+        ├── Curtate HypoCycloids (H < R2)
+        └── Prolate HypoCycloids (H > R2)
+
+
