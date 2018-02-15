@@ -157,5 +157,7 @@ interesting settings (epi + hypo):
 
 # todo
 - add node icon
+- fix closing point (remove duplicate)
+- add start turn / end turn
 
 

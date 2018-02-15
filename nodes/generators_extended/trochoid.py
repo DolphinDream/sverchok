@@ -30,9 +30,8 @@ typeItems = [("HYPO", "Hypo", ""), ("LINE", "Line", ""), ("EPI", "Epi", "")]
 
 # name : [ preset index, type, r1, r2, height, phase1, phase2, turns, resolution, scale ]
 trochoidPresets = {
-    # some common curves
     " ":                    (0, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 1.0),
-    # LINE
+    # SAMPLE of ALL TYPES
     "CYCLOID":              (10, "LINE", 1.0, 1.0, 1.0, 0.0, 0.0, 2.0, 200, 0.1),
     "CURTATE CYCLOID":      (11, "LINE", 1.0, 1.0, 0.5, 0.0, 0.0, 2.0, 200, 0.1),
     "PROLATE CYCLOID":      (12, "LINE", 1.0, 1.0, 2.0, 0.0, 0.0, 2.0, 200, 0.1),
@@ -42,11 +41,11 @@ trochoidPresets = {
     "HYPO CYCLOID":         (16, "HYPO", 7.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.5),
     "CURTATE HYPO-CYCLOID": (17, "HYPO", 7.0, 1.0, 0.5, 0.0, 0.0, 1.0, 200, 0.5),
     "PROLATE HYPO-CYCLOID": (18, "HYPO", 7.0, 1.0, 2.0, 0.0, 0.0, 1.0, 200, 0.5),
-    # EPI
+    # EPIs
     "CARDIOID":             (20, "EPI", 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0),
     "NEPHROID":             (21, "EPI", 2.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0),
     "RANUNCULOID":          (22, "EPI", 5.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.5),
-    # HYPO
+    # HYPOs
     "DELTOID":              (30, "HYPO", 3.0, 1.0, 1.0, 0.0, 0.0, 1.0, 300, 1.0),
     "ASTROID":              (31, "HYPO", 4.0, 1.0, 1.0, 0.0, 0.0, 1.0, 300, 0.5),
     # other somewhat interesting EPIs
@@ -207,7 +206,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
 
         a, b, p1, p2 = [R2, R1, P2, P1] if self.swap else [R1, R2, P1, P2]
 
-        if self.normalize:
+        if self.normalize: # normalize ON ? => scale to the normalize size
             if self.tType == "EPI":
                 S = 1 / (abs(a + b) + H + EPS) * self.normalize_size
             elif self.tType == "HYPO":
