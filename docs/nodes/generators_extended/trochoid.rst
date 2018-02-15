@@ -155,4 +155,7 @@ interesting settings (epi + hypo):
         ├── Curtate HypoCycloids (H < R2)
         └── Prolate HypoCycloids (H > R2)
 
+# todo
+- add node icon
+
 

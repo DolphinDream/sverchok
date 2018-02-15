@@ -24,41 +24,43 @@ from sverchok.data_structure import (match_long_repeat, updateNode)
 
 from math import sin, cos, pi
 
+EPS = 1e-5 # epsilon (used to avoid division by zero)
+
 typeItems = [("HYPO", "Hypo", ""), ("LINE", "Line", ""), ("EPI", "Epi", "")]
 
 # name : [ preset index, type, r1, r2, height, phase1, phase2, turns, resolution, scale ]
 trochoidPresets = {
-    # some common shapes
-    " ":               (0, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 1.0),
+    # some common curves
+    " ":                    (0, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 1.0),
     # LINE
-    "CYCLOID":         (10, "LINE", 1.0, 1.0, 1.0, 0.0, 0.0, 2.0, 200, 0.1),
-    "CYCLOID C":       (11, "LINE", 1.0, 1.0, 0.5, 0.0, 0.0, 2.0, 200, 0.1),
-    "CYCLOID P":       (12, "LINE", 1.0, 1.0, 2.0, 0.0, 0.0, 2.0, 200, 0.1),
-    "EPI CYCLOID":     (13, "EPI", 7.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.5),
-    "EPI CYCLOID C":   (14, "EPI", 7.0, 1.0, 0.5, 0.0, 0.0, 1.0, 200, 0.5),
-    "EPI CYCLOID P":   (15, "EPI", 7.0, 1.0, 2.0, 0.0, 0.0, 1.0, 200, 0.5),
-    "HYPO CYCLOID":    (16, "HYPO", 7.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.5),
-    "HYPO CYCLOID C":  (17, "HYPO", 7.0, 1.0, 0.5, 0.0, 0.0, 1.0, 200, 0.5),
-    "HYPO CYCLOID P":  (18, "HYPO", 7.0, 1.0, 2.0, 0.0, 0.0, 1.0, 200, 0.5),
+    "CYCLOID":              (10, "LINE", 1.0, 1.0, 1.0, 0.0, 0.0, 2.0, 200, 0.1),
+    "CURTATE CYCLOID":      (11, "LINE", 1.0, 1.0, 0.5, 0.0, 0.0, 2.0, 200, 0.1),
+    "PROLATE CYCLOID":      (12, "LINE", 1.0, 1.0, 2.0, 0.0, 0.0, 2.0, 200, 0.1),
+    "EPI-CYCLOID":          (13, "EPI", 7.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.5),
+    "CURTATE EPI-CYCLOID":  (14, "EPI", 7.0, 1.0, 0.5, 0.0, 0.0, 1.0, 200, 0.5),
+    "PROLATE EPI-CYCLOID":  (15, "EPI", 7.0, 1.0, 2.0, 0.0, 0.0, 1.0, 200, 0.5),
+    "HYPO CYCLOID":         (16, "HYPO", 7.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.5),
+    "CURTATE HYPO-CYCLOID": (17, "HYPO", 7.0, 1.0, 0.5, 0.0, 0.0, 1.0, 200, 0.5),
+    "PROLATE HYPO-CYCLOID": (18, "HYPO", 7.0, 1.0, 2.0, 0.0, 0.0, 1.0, 200, 0.5),
     # EPI
-    "CARDIOID":        (20, "EPI", 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0),
-    "NEPHROID":        (21, "EPI", 2.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0),
-    "RANUNCULOID":     (22, "EPI", 5.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.5),
+    "CARDIOID":             (20, "EPI", 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0),
+    "NEPHROID":             (21, "EPI", 2.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0),
+    "RANUNCULOID":          (22, "EPI", 5.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.5),
     # HYPO
-    "DELTOID":         (30, "HYPO", 3.0, 1.0, 1.0, 0.0, 0.0, 1.0, 300, 1.0),
-    "ASTROID":         (31, "HYPO", 4.0, 1.0, 1.0, 0.0, 0.0, 1.0, 300, 0.5),
+    "DELTOID":              (30, "HYPO", 3.0, 1.0, 1.0, 0.0, 0.0, 1.0, 300, 1.0),
+    "ASTROID":              (31, "HYPO", 4.0, 1.0, 1.0, 0.0, 0.0, 1.0, 300, 0.5),
     # other somewhat interesting EPIs
-    "E 6-1-5":         (100, "EPI", 6.0, 1.0, 5.0, 0.0, 0.0, 1.0, 300, 0.2),
-    "E 6-3-1":         (101, "EPI", 6.0, 3.0, 1.0, 0.0, 0.0, 1.0, 200, 0.2),
-    "E 10-1-9":        (102, "EPI", 10.0, 1.0, 9.0, 0.0, 0.0, 1.0, 500, 0.1),
-    "E 12-7-11":       (103, "EPI", 12.0, 7.0, 11.0, 0.0, 0.0, 7.0, 500, 0.1),
-    "E 7-2-2":         (104, "EPI", 7.0, 2.0, 2.0, 0.0, 0.0, 2.0, 300, 0.2),
+    "E 6-1-5":              (100, "EPI", 6.0, 1.0, 5.0, 0.0, 0.0, 1.0, 300, 0.2),
+    "E 6-3-1":              (101, "EPI", 6.0, 3.0, 1.0, 0.0, 0.0, 1.0, 200, 0.2),
+    "E 10-1-9":             (102, "EPI", 10.0, 1.0, 9.0, 0.0, 0.0, 1.0, 500, 0.1),
+    "E 12-7-11":            (103, "EPI", 12.0, 7.0, 11.0, 0.0, 0.0, 7.0, 500, 0.1),
+    "E 7-2-2":              (104, "EPI", 7.0, 2.0, 2.0, 0.0, 0.0, 2.0, 300, 0.2),
     # other somewhat interesting HYPOs
-    "H 6-1-4":         (200, "HYPO", 6.0, 1.0, 4.0, 0.0, 0.0, 1.0, 500, 0.2),
-    "H 10-1-9":        (201, "HYPO", 10.0, 1.0, 9.0, 0.0, 0.0, 1.0, 500, 0.1),
-    "H 13-6-12":       (202, "HYPO", 13.0, 6.0, 12.0, 0.0, 0.0, 6.0, 200, 0.1),
-    "H 1-5-2":         (203, "HYPO", 1.0, 5.0, 2.0, 0.0, 0.0, 5.0, 200, 0.3),
-    "H 6-10-5":        (204, "HYPO", 6.0, 10.0, 5.0, 0.0, 0.0, 10.0, 100, 0.3),
+    "H 6-1-4":              (200, "HYPO", 6.0, 1.0, 4.0, 0.0, 0.0, 1.0, 500, 0.2),
+    "H 10-1-9":             (201, "HYPO", 10.0, 1.0, 9.0, 0.0, 0.0, 1.0, 500, 0.1),
+    "H 13-6-12":            (202, "HYPO", 13.0, 6.0, 12.0, 0.0, 0.0, 6.0, 200, 0.1),
+    "H 1-5-2":              (203, "HYPO", 1.0, 5.0, 2.0, 0.0, 0.0, 5.0, 200, 0.3),
+    "H 6-10-5":             (204, "HYPO", 6.0, 10.0, 5.0, 0.0, 0.0, 10.0, 100, 0.3),
 }
 
 
@@ -203,33 +205,33 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         verts = []
         edges = []
 
-        a, b = [R2, R1] if self.swap else [R1, R2]
+        a, b, p1, p2 = [R2, R1, P2, P1] if self.swap else [R1, R2, P1, P2]
 
         if self.normalize:
             if self.tType == "EPI":
-                S = 1/(abs(a+b)+H) * self.normalize_size
+                S = 1 / (abs(a + b) + H + EPS) * self.normalize_size
             elif self.tType == "HYPO":
-                S = 1/(abs(a-b)+H) * self.normalize_size
+                S = 1 / (abs(a - b) + H + EPS) * self.normalize_size
             else:
-                S = 1/(2*pi*a+H) * self.normalize_size
+                S = 1 / (2 * pi * a + H + EPS) * self.normalize_size
 
         a = a * S
-        b = b * S
+        b = max(b * S, EPS)
         h = H * S
 
         if self.tType == "EPI":
             R = a + b  # outer radius
             Rb = R / b  # outer "gear ratio"
-            fx = lambda t: R * cos(t + P1) - h * cos(Rb * t + P2)
-            fy = lambda t: R * sin(t + P1) - h * sin(Rb * t + P2)
+            fx = lambda t: R * cos(t + p1) - h * cos(Rb * t + p2)
+            fy = lambda t: R * sin(t + p1) - h * sin(Rb * t + p2)
         elif self.tType == "HYPO":
             r = a - b  # inner radius
             rb = r / b  # inner "gear ratio"
-            fx = lambda t: r * cos(t + P1) + h * cos(rb * t + P2)
-            fy = lambda t: r * sin(t + P1) - h * sin(rb * t + P2)
+            fx = lambda t: r * cos(t + p1) + h * cos(rb * t + p2)
+            fy = lambda t: r * sin(t + p1) - h * sin(rb * t + p2)
         else:  # LINE
-            fx = lambda t: b * t - h * sin(t + P1)
-            fy = lambda t: b - h * cos(t + P1)
+            fx = lambda t: b * t - h * sin(t + p1)
+            fy = lambda t: b - h * cos(t + p1)
 
         N = max(3, int(T * N))  # total number of points in all turns
         dT = 2 * pi * T / N
@@ -270,7 +272,8 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         input_N = list(map(lambda x: max(3, int(x)), input_N))
         input_S = list(map(lambda x: max(0.0, x), input_S))
 
-        parameters = match_long_repeat([input_R1, input_R2, input_H, input_P1, input_P2, input_T, input_N, input_S])
+        parameters = match_long_repeat([input_R1, input_R2, input_H,
+                                        input_P1, input_P2, input_T, input_N, input_S])
 
         vertList = []
         edgeList = []
