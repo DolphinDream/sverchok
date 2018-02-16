@@ -67,7 +67,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
     ''' Trochoid '''
     bl_idname = 'SvTrochoidNode'
     bl_label = 'Trochoid'
-    bl_icon = 'OUTLINER_OB_EMPTY'
+    sv_icon = 'SV_TROCHOID'
 
     def update_trochoid(self, context):
         if self.updating:
