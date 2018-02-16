@@ -16,8 +16,6 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-# This node is based on blender's built-in TorusKnot+ add-on
-
 import bpy
 from bpy.props import IntProperty, FloatProperty, BoolProperty, EnumProperty
 
@@ -41,34 +39,37 @@ spiralTypeItems = [
     ("SPIRANGLE", "Spirangle", "Generate a spirangle spiral.", 6)
 ]
 
-# name : [ type, eR, iR, exponent, turns, resolution, scale, height ]
+# name : [ preset index, type, eR, iR, exponent, turns, resolution, scale, height ]
 spiralPresets = {
-    " ":            ["", 0.0, 0.0, 0.0, 0, 0, 0.0, 0.0],
-    "FIBONACCI":    ["LOGARITHMIC", 1.0, 0.5, PHIPI, 3, 100, 1.0, 0.0],
-    "HELIX":        ["LOGARITHMIC", 1.0, 0.0, 0.0, 7, 100, 1.0, 4.0],
-    "ARCHIMEDEAN":  ["ARCHIMEDEAN", 1.0, 0.0, 1.0, 7, 100, 1.0, 0.0],
-    "CONICAL":      ["ARCHIMEDEAN", 1.0, 0.0, 1.0, 7, 100, 1.0, 3.0],
-    "PARABOLIC":    ["ARCHIMEDEAN", 1.0, 0.0, 2.0, 5, 100, 1.0, 0.0],
-    "HYPERBOLIC":   ["ARCHIMEDEAN", 1.0, 0.0, -1.0, 11, 100, 1.0, 0.0],
-    "LITUUS":       ["ARCHIMEDEAN", 1.0, 0.0, -2.0, 11, 100, 1.0, 0.0],
-    "SPHERICAL":    ["SPHERICAL", 1.0, 0.0, 0.0, 11, 55, 1.0, 0.0],
-    "OVOIDAL":      ["OVOIDAL", 5.0, 1.0, 0.0, 7, 55, 1.0, 6.0],
-    "CORNU":        ["CORNU", 1.0, 1.0, 1.0, 5, 55, 1.0, 0.0],
-    "EXO":          ["EXO", 1.0, 0.1, PHI, 11, 101, 1.0, 0.0],
-    "SPIRANGLE SC": ["SPIRANGLE", 1.0, 0.0, 0.0, 8, 4, 1.0, 0.0],
-    "SPIRANGLE HX": ["SPIRANGLE", 1.0, 0.0, 0.5, 7, 6, 1.0, 0.0]
+    " ":            (0, "", 0.0, 0.0, 0.0, 0, 0, 0.0, 0.0),
+    # archimedean spirals
+    "ARCHIMEDEAN":  (10, "ARCHIMEDEAN", 1.0, 0.0, 1.0, 7, 100, 1.0, 0.0),
+    "PARABOLIC":    (11, "ARCHIMEDEAN", 1.0, 0.0, 2.0, 5, 100, 1.0, 0.0),
+    "HYPERBOLIC":   (12, "ARCHIMEDEAN", 1.0, 0.0, -1.0, 11, 100, 1.0, 0.0),
+    "LITUUS":       (13, "ARCHIMEDEAN", 1.0, 0.0, -2.0, 11, 100, 1.0, 0.0),
+    # logarithmic spirals
+    "FIBONACCI":    (20, "LOGARITHMIC", 1.0, 0.5, PHIPI, 3, 100, 1.0, 0.0),
+    # 3D spirals (mix type)
+    "CONICAL":      (30, "ARCHIMEDEAN", 1.0, 0.0, 1.0, 7, 100, 1.0, 3.0),
+    "HELIX":        (31, "LOGARITHMIC", 1.0, 0.0, 0.0, 7, 100, 1.0, 4.0),
+    "SPHERICAL":    (32, "SPHERICAL", 1.0, 0.0, 0.0, 11, 55, 1.0, 0.0),
+    "OVOIDAL":      (33, "OVOIDAL", 5.0, 1.0, 0.0, 7, 55, 1.0, 6.0),
+    # odd spirals
+    "CORNU":        (40, "CORNU", 1.0, 1.0, 1.0, 5, 55, 1.0, 0.0),
+    "EXO":          (41, "EXO", 1.0, 0.1, PHI, 11, 101, 1.0, 0.0),
+    # choppy spirals
+    "SPIRANGLE SC": (50, "SPIRANGLE", 1.0, 0.0, 0.0, 8, 4, 1.0, 0.0),
+    "SPIRANGLE HX": (51, "SPIRANGLE", 1.0, 0.0, 0.5, 7, 6, 1.0, 0.)
 }
 
 normalizeItems = [
-    ("ER", "eR", "Normalize the external radius.", 0),
-    ("IR", "iR", "Normalize the internal radius.", 1)
+    ("ER", "eR", "Normalize spiral to the external radius.", 0),
+    ("IR", "iR", "Normalize spiral to the internal radius.", 1)
 ]
 
 
 def make_archimedean_spiral(flags, settings):
     '''
-        Make an ARCHIMEDEAN spiral
-
         eR       : exterior radius (end radius)
         iR       : interior radius (start radius)
         exponent : rate of growth (between iR and eR)
@@ -114,8 +115,6 @@ def make_archimedean_spiral(flags, settings):
 
 def make_logarithmic_spiral(flags, settings):
     '''
-        Make a LOGARITHMIC spiral
-
         eR       : exterior radius
         iR       : interior radius
         exponent : rate of growth
@@ -157,8 +156,6 @@ def make_logarithmic_spiral(flags, settings):
 
 def make_spherical_spiral(flags, settings):
     '''
-        Make a SPHERICAL spiral
-
         This is the approximate sperical spiral that has a finite length,
         where the phi & theta angles sweep their ranges at constant rates.
 
@@ -206,8 +203,6 @@ def make_spherical_spiral(flags, settings):
 
 def make_ovoidal_spiral(flags, settings):
     '''
-        Make a OVOIDAL spiral
-
         eR       : exterior radius (vertical cross section circles)
         iR       : interior radius (horizontal cross section circle)
         exponent : rate of growth (sigmoid in & out)
@@ -259,8 +254,6 @@ def make_ovoidal_spiral(flags, settings):
 
 def make_cornu_spiral(flags, settings):
     '''
-        Make a CORNU spiral
-
         L     : length
         N     : resolution
         S     : scale
@@ -328,7 +321,7 @@ def make_cornu_spiral(flags, settings):
         addVert1([px, py, pz])  # positive spiral verts
         addVert2([-px, -py, -pz])  # netative spiral verts
 
-    verts = verts2[::-1] + verts1
+    verts = verts2[:: -1] + verts1
 
     edges = [[i, i + 1] for i in range(len(verts) - 1)]
 
@@ -337,8 +330,6 @@ def make_cornu_spiral(flags, settings):
 
 def make_exo_spiral(flags, settings):
     '''
-        Make an EXO spiral
-
         This is an exponential in & out between two circles
 
         eR       : exterior radius
@@ -384,8 +375,6 @@ def make_exo_spiral(flags, settings):
 
 def make_spirangle_spiral(flags, settings):
     '''
-        Make a SPIRANGLE spiral
-
         eR       : exterior radius (end radius)
         iR       : interior radius (start radius)
         exponent : rate of growth
@@ -455,6 +444,7 @@ class SvSpiralNode(bpy.types.Node, SverchCustomTreeNode):
     ''' Spiral '''
     bl_idname = 'SvSpiralNode'
     bl_label = 'Spiral'
+    sv_icon = "SV_SPIRAL"
 
     def update_spiral(self, context):
         if self.updating:
@@ -463,6 +453,9 @@ class SvSpiralNode(bpy.types.Node, SverchCustomTreeNode):
         self.presets = " "
         updateNode(self, context)
 
+    def preset_items(self, context):
+        return [(k, k.title(), "", "", s[0]) for k, s in sorted(spiralPresets.items(), key=lambda k: k[1][0])]
+
     def update_presets(self, context):
         self.updating = True
 
@@ -470,7 +463,7 @@ class SvSpiralNode(bpy.types.Node, SverchCustomTreeNode):
             self.updating = False
             return
 
-        sT, eR, iR, e, t, N, s, h = spiralPresets[self.presets]
+        _, sT, eR, iR, e, t, N, s, h = spiralPresets[self.presets]
         self.sType = sT
         self.eRadius = eR
         self.iRadius = iR
@@ -485,10 +478,8 @@ class SvSpiralNode(bpy.types.Node, SverchCustomTreeNode):
         self.updating = False
         updateNode(self, context)
 
-    presetItems = [(k, k.title(), "", "", i) for i, (k, v) in enumerate(sorted(spiralPresets.items()))]
-
     presets = EnumProperty(
-        name="Presets", items=presetItems,
+        name="Presets", items=preset_items,
         update=update_presets)
 
     sType = EnumProperty(
