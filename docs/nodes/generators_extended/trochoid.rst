@@ -86,7 +86,7 @@ The inputs are "sanitized" to restrict their values to valid domains:
 +----------------+--------+---------+--------------------------------------------------------------------+
 | **Radius2**    | Float  | 1.0     | Radius of the moving circle                                        |
 +----------------+--------+---------+--------------------------------------------------------------------+
-| **Height**     | Float  | 5.0     | Distance from the drawing point to the center of the moving circle |
+| **Height**     | Float  | 4.0     | Distance from the drawing point to the center of the moving circle |
 +----------------+--------+---------+--------------------------------------------------------------------+
 | **Phase1**     | Float  | 0.0     | The starting angle on the static circle                            |
 +----------------+--------+---------+--------------------------------------------------------------------+

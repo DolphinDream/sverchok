@@ -48,6 +48,7 @@ trochoidPresets = {
     # HYPOs
     "DELTOID":              (30, "HYPO", 3.0, 1.0, 1.0, 0.0, 0.0, 1.0, 300, 1.0),
     "ASTROID":              (31, "HYPO", 4.0, 1.0, 1.0, 0.0, 0.0, 1.0, 300, 0.5),
+    "ROSE":                 (32, "HYPO", 6.0, 1.0, 7.0, 0.0, 0.0, 1.0, 300, 0.5),
     # other somewhat interesting EPIs
     "E 6-1-5":              (100, "EPI", 6.0, 1.0, 5.0, 0.0, 0.0, 1.0, 300, 0.2),
     "E 6-3-1":              (101, "EPI", 6.0, 3.0, 1.0, 0.0, 0.0, 1.0, 200, 0.2),
@@ -86,8 +87,8 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
             self.updating = False
             return
 
-        _, tt, r1, r2, h, p1, p2, T, N, S = trochoidPresets[self.presets]
-        self.tType = tt
+        _, tT, r1, r2, h, p1, p2, T, N, S = trochoidPresets[self.presets]
+        self.tType = tT
         self.radius1 = r1
         self.radius2 = r2
         self.height = h
@@ -122,7 +123,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
     height = FloatProperty(
         name='Height',
         description='Distance from drawing point to the center of the moving circle',
-        default=5.0, min=0.0, update=update_trochoid)
+        default=4.0, min=0.0, update=update_trochoid)
 
     phase1 = FloatProperty(
         name='Phase1', description='Starting angle for the static circle (radians)',
@@ -153,13 +154,14 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         name='Swap', description='Swap radii and phases: R1<->R2 and P1<->P2',
         default=False, update=update_trochoid)
 
+    # extended setting
     normalize = BoolProperty(
         name='Normalize', description='Scale the curve to fit within normalized size',
         default=False, update=updateNode)
 
     normalize_size = FloatProperty(
         name='Normalized size', description='Normalized size of the curve',
-        default=2.0, min=0.0, update=update_trochoid)
+        default=2.0, min=0.0, update=updateNode)
 
     updating = BoolProperty(default=False)  # used for disabling update callback
 
@@ -176,6 +178,8 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
 
         self.outputs.new('VerticesSocket', "Verts", "Verts")
         self.outputs.new('StringsSocket', "Edges", "Edges")
+
+        self.presets = "ROSE"
 
     def draw_buttons(self, context, layout):
         layout.prop(self, 'presets')
