@@ -54,7 +54,7 @@ spiralPresets = {
     "HELIX":        (31, "LOGARITHMIC", 1.0, 0.0, 0.0, 7, 100, 1.0, 4.0),
     "SPHERICAL":    (32, "SPHERICAL", 1.0, 0.0, 0.0, 11, 55, 1.0, 0.0),
     "OVOIDAL":      (33, "OVOIDAL", 5.0, 1.0, 0.0, 7, 55, 1.0, 6.0),
-    # odd spirals
+    # spiral odities 
     "CORNU":        (40, "CORNU", 1.0, 1.0, 1.0, 5, 55, 1.0, 0.0),
     "EXO":          (41, "EXO", 1.0, 0.1, PHI, 11, 101, 1.0, 0.0),
     # choppy spirals
@@ -424,12 +424,12 @@ def normalize_spiral(verts, normalize_eR, eR, iR, scale):
     '''
         Normalize the spiral (XY) to either exterior or interior radius
     '''
-    if normalize_eR:  # normalize exterior radius (ending radius)
+    if normalize_eR:  # normalize to exterior radius (ending radius)
         psx = verts[-1][0]
         psy = verts[-1][1]
         r = sqrt(psx * psx + psy * psy)
         ss = eR / r * scale if eR != 0 else 1
-    else:  # normalize interior radius (starting radius)
+    else:  # normalize to interior radius (starting radius)
         psx = verts[0][0]
         psy = verts[0][1]
         r = sqrt(psx * psx + psy * psy)
