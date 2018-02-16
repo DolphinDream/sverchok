@@ -474,6 +474,8 @@ class SvSpiralNode(bpy.types.Node, SverchCustomTreeNode):
         self.height = h
         self.phase = 0
         self.arms = 1
+        self.flip = False
+        self.separate = False
 
         self.updating = False
         updateNode(self, context)
