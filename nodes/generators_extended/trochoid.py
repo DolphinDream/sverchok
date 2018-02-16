@@ -24,7 +24,7 @@ from sverchok.data_structure import (match_long_repeat, updateNode)
 
 from math import sin, cos, pi
 
-EPS = 1e-5 # epsilon (used to avoid division by zero)
+EPS = 1e-5  # epsilon (used to avoid division by zero)
 
 typeItems = [("HYPO", "Hypo", ""), ("LINE", "Line", ""), ("EPI", "Epi", "")]
 
@@ -210,12 +210,12 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
 
         a, b, p1, p2 = [R2, R1, P2, P1] if self.swap else [R1, R2, P1, P2]
 
-        if self.normalize: # normalize ON ? => scale to the normalize size
+        if self.normalize:  # normalize ON ? => scale to the normalize size
             if self.tType == "EPI":
                 S = 1 / (abs(a + b) + H + EPS) * self.normalize_size
             elif self.tType == "HYPO":
                 S = 1 / (abs(a - b) + H + EPS) * self.normalize_size
-            else:
+            else:  # LINE
                 S = 1 / (2 * pi * a + H + EPS) * self.normalize_size
 
         a = a * S
@@ -236,14 +236,13 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
             fx = lambda t: b * t - h * sin(t + p1)
             fy = lambda t: b - h * cos(t + p1)
 
+        v = lambda t: [fx(t), fy(t), 0]
+
         N = max(3, int(T * N))  # total number of points in all turns
         dT = 2 * pi * T / N
 
-        for n in range(N + 1):
-            t = n * dT
-            verts.append([fx(t), fy(t), 0])
-
-        edges = list([i, i + 1] for i in range(N))
+        verts = [v(n * dT) for n in range(N + 1)]
+        edges = [[i, i + 1] for i in range(N)]
 
         if self.closed:
             edges.append([N - 1, 0])
