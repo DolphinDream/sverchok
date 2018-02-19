@@ -48,7 +48,7 @@ trochoidPresets = {
     # HYPOs
     "DELTOID":              (30, "HYPO", 3.0, 1.0, 1.0, 0.0, 0.0, 1.0, 300, 1.0),
     "ASTROID":              (31, "HYPO", 4.0, 1.0, 1.0, 0.0, 0.0, 1.0, 300, 0.5),
-    "ROSE":                 (32, "HYPO", 6.0, 1.0, 7.0, 0.0, 0.0, 1.0, 300, 0.5),
+    "ROSETTE":              (32, "HYPO", 6.0, 1.0, 7.0, 0.0, 0.0, 1.0, 300, 0.5),
     # other somewhat interesting EPIs
     "E 6-1-5":              (100, "EPI", 6.0, 1.0, 5.0, 0.0, 0.0, 1.0, 300, 0.2),
     "E 6-3-1":              (101, "EPI", 6.0, 3.0, 1.0, 0.0, 0.0, 1.0, 200, 0.2),
@@ -179,7 +179,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         self.outputs.new('VerticesSocket', "Verts", "Verts")
         self.outputs.new('StringsSocket', "Edges", "Edges")
 
-        self.presets = "ROSE"
+        self.presets = "ROSETTE"
 
     def draw_buttons(self, context, layout):
         layout.prop(self, 'presets')
@@ -275,7 +275,8 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         input_S = list(map(lambda x: max(0.0, x), input_S))
 
         parameters = match_long_repeat([input_R1, input_R2, input_H,
-                                        input_P1, input_P2, input_T, input_N, input_S])
+                                        input_P1, input_P2, input_T,
+                                        input_N, input_S])
 
         vertList = []
         edgeList = []
