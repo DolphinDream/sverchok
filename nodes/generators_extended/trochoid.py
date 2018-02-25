@@ -24,7 +24,7 @@ from sverchok.data_structure import (match_long_repeat, updateNode)
 
 from math import sin, cos, pi
 
-EPS = 1e-5  # epsilon (used to avoid division by zero)
+epsilon = 1e-5  # used to avoid division by zero
 
 typeItems = [("HYPO", "Hypo", ""), ("LINE", "Line", ""), ("EPI", "Epi", "")]
 
@@ -32,35 +32,35 @@ typeItems = [("HYPO", "Hypo", ""), ("LINE", "Line", ""), ("EPI", "Epi", "")]
 trochoidPresets = {
     " ":                    (0, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 1.0),
     # SAMPLE of ALL TYPES
-    "CYCLOID":              (10, "LINE", 1.0, 1.0, 1.0, 0.0, 0.0, 2.0, 200, 0.1),
-    "CURTATE CYCLOID":      (11, "LINE", 1.0, 1.0, 0.5, 0.0, 0.0, 2.0, 200, 0.1),
-    "PROLATE CYCLOID":      (12, "LINE", 1.0, 1.0, 2.0, 0.0, 0.0, 2.0, 200, 0.1),
-    "EPI-CYCLOID":          (13, "EPI", 7.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.5),
-    "CURTATE EPI-CYCLOID":  (14, "EPI", 7.0, 1.0, 0.5, 0.0, 0.0, 1.0, 200, 0.5),
-    "PROLATE EPI-CYCLOID":  (15, "EPI", 7.0, 1.0, 2.0, 0.0, 0.0, 1.0, 200, 0.5),
-    "HYPO CYCLOID":         (16, "HYPO", 7.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.5),
-    "CURTATE HYPO-CYCLOID": (17, "HYPO", 7.0, 1.0, 0.5, 0.0, 0.0, 1.0, 200, 0.5),
-    "PROLATE HYPO-CYCLOID": (18, "HYPO", 7.0, 1.0, 2.0, 0.0, 0.0, 1.0, 200, 0.5),
+    "CYCLOID":              (10, "LINE", 1.0, 1.0, 1.0, 0.0, 0.0, 3.0, 200, 0.1),
+    "CURTATE CYCLOID":      (11, "LINE", 1.0, 1.0, 0.5, 0.0, 0.0, 3.0, 200, 0.1),
+    "PROLATE CYCLOID":      (12, "LINE", 1.0, 1.0, 2.0, 0.0, 0.0, 3.0, 200, 0.1),
+    "EPI-CYCLOID":          (13, "EPI", 7.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.11),
+    "CURTATE EPI-CYCLOID":  (14, "EPI", 7.0, 1.0, 0.5, 0.0, 0.0, 1.0, 200, 0.12),
+    "PROLATE EPI-CYCLOID":  (15, "EPI", 7.0, 1.0, 2.0, 0.0, 0.0, 1.0, 200, 0.1),
+    "HYPO CYCLOID":         (16, "HYPO", 7.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.15),
+    "CURTATE HYPO-CYCLOID": (17, "HYPO", 7.0, 1.0, 0.5, 0.0, 0.0, 1.0, 200, 0.15),
+    "PROLATE HYPO-CYCLOID": (18, "HYPO", 7.0, 1.0, 2.0, 0.0, 0.0, 1.0, 200, 0.12),
     # EPIs
-    "CARDIOID":             (20, "EPI", 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0),
-    "NEPHROID":             (21, "EPI", 2.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 1.0),
-    "RANUNCULOID":          (22, "EPI", 5.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.5),
+    "CARDIOID":             (20, "EPI", 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.4),
+    "NEPHROID":             (21, "EPI", 2.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.25),
+    "RANUNCULOID":          (22, "EPI", 5.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200, 0.15),
     # HYPOs
-    "DELTOID":              (30, "HYPO", 3.0, 1.0, 1.0, 0.0, 0.0, 1.0, 300, 1.0),
-    "ASTROID":              (31, "HYPO", 4.0, 1.0, 1.0, 0.0, 0.0, 1.0, 300, 0.5),
-    "ROSETTE":              (32, "HYPO", 6.0, 1.0, 7.0, 0.0, 0.0, 1.0, 300, 0.5),
+    "DELTOID":              (30, "HYPO", 3.0, 1.0, 1.0, 0.0, 0.0, 1.0, 300, 0.4),
+    "ASTROID":              (31, "HYPO", 4.0, 1.0, 1.0, 0.0, 0.0, 1.0, 300, 0.25),
+    "ROSETTE":              (32, "HYPO", 6.0, 1.0, 5.0, 0.0, 0.0, 1.0, 300, 0.11),
     # other somewhat interesting EPIs
-    "E 6-1-5":              (100, "EPI", 6.0, 1.0, 5.0, 0.0, 0.0, 1.0, 300, 0.2),
-    "E 6-3-1":              (101, "EPI", 6.0, 3.0, 1.0, 0.0, 0.0, 1.0, 200, 0.2),
-    "E 10-1-9":             (102, "EPI", 10.0, 1.0, 9.0, 0.0, 0.0, 1.0, 500, 0.1),
-    "E 12-7-11":            (103, "EPI", 12.0, 7.0, 11.0, 0.0, 0.0, 7.0, 500, 0.1),
-    "E 7-2-2":              (104, "EPI", 7.0, 2.0, 2.0, 0.0, 0.0, 2.0, 300, 0.2),
+    "E 6-1-5":              (100, "EPI", 6.0, 1.0, 5.0, 0.0, 0.0, 1.0, 300, 0.08),
+    "E 6-3-1":              (101, "EPI", 6.0, 3.0, 1.0, 0.0, 0.0, 1.0, 200, 0.1),
+    "E 10-1-9":             (102, "EPI", 10.0, 1.0, 9.0, 0.0, 0.0, 1.0, 500, 0.05),
+    "E 12-7-11":            (103, "EPI", 12.0, 7.0, 11.0, 0.0, 0.0, 7.0, 500, 0.03),
+    "E 7-2-2":              (104, "EPI", 7.0, 2.0, 2.0, 0.0, 0.0, 2.0, 300, 0.09),
     # other somewhat interesting HYPOs
-    "H 6-1-4":              (200, "HYPO", 6.0, 1.0, 4.0, 0.0, 0.0, 1.0, 500, 0.2),
-    "H 10-1-9":             (201, "HYPO", 10.0, 1.0, 9.0, 0.0, 0.0, 1.0, 500, 0.1),
-    "H 13-6-12":            (202, "HYPO", 13.0, 6.0, 12.0, 0.0, 0.0, 6.0, 200, 0.1),
-    "H 1-5-2":              (203, "HYPO", 1.0, 5.0, 2.0, 0.0, 0.0, 5.0, 200, 0.3),
-    "H 6-10-5":             (204, "HYPO", 6.0, 10.0, 5.0, 0.0, 0.0, 10.0, 100, 0.3),
+    "H 6-1-4":              (200, "HYPO", 6.0, 1.0, 4.0, 0.0, 0.0, 1.0, 500, 0.11),
+    "H 10-1-9":             (201, "HYPO", 10.0, 1.0, 9.0, 0.0, 0.0, 1.0, 500, 0.06),
+    "H 13-6-12":            (202, "HYPO", 13.0, 6.0, 12.0, 0.0, 0.0, 6.0, 200, 0.05),
+    "H 1-5-2":              (203, "HYPO", 1.0, 5.0, 2.0, 0.0, 0.0, 5.0, 200, 0.16),
+    "H 6-10-5":             (204, "HYPO", 6.0, 10.0, 5.0, 0.0, 0.0, 10.0, 100, 0.11),
 }
 
 
@@ -69,6 +69,10 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
     bl_idname = 'SvTrochoidNode'
     bl_label = 'Trochoid'
     sv_icon = 'SV_TROCHOID'
+
+    def update_normalize(self, context):
+        self.update_sockets()
+        updateNode(self, context)
 
     def update_trochoid(self, context):
         if self.updating:
@@ -81,13 +85,12 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         return [(k, k.title(), "", "", s[0]) for k, s in sorted(trochoidPresets.items(), key=lambda k: k[1][0])]
 
     def update_presets(self, context):
-        self.updating = True
-
         if self.presets == " ":
-            self.updating = False
             return
 
-        _, tT, r1, r2, h, p1, p2, T, N, S = trochoidPresets[self.presets]
+        self.updating = True
+
+        tT, r1, r2, h, p1, p2, T, N, S = trochoidPresets[self.presets][1:]
         self.tType = tT
         self.radius1 = r1
         self.radius2 = r2
@@ -96,9 +99,11 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         self.phase2 = p2
         self.turns = T
         self.resolution = N
-        self.scale = S
+        self.scale = 1.0
+        self.normalize_size = 1.0
+        self.normalize = True
         self.swap = False
-        self.closed = False if self.tType == "LINE" else True
+        self.close = False if self.tType == "LINE" else True
 
         self.updating = False
         updateNode(self, context)
@@ -146,22 +151,21 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         name='Scale', description='Scale of the main parameters: radii and height',
         default=1.0, min=0.0, update=update_trochoid)
 
-    closed = BoolProperty(
-        name='Closed', description='Close the line',
+    close = BoolProperty(
+        name='Close', description='Close the line',
         default=False, update=update_trochoid)
 
     swap = BoolProperty(
         name='Swap', description='Swap radii and phases: R1<->R2 and P1<->P2',
         default=False, update=update_trochoid)
 
-    # extended setting
     normalize = BoolProperty(
         name='Normalize', description='Scale the curve to fit within normalized size',
-        default=False, update=updateNode)
+        default=False, update=update_normalize)
 
     normalize_size = FloatProperty(
-        name='Normalized size', description='Normalized size of the curve',
-        default=2.0, min=0.0, update=updateNode)
+        name='Size', description='Normalized size of the curve',
+        default=1.0, min=0.0, update=updateNode)
 
     updating = BoolProperty(default=False)  # used for disabling update callback
 
@@ -187,12 +191,17 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         row = col.row(align=True)
         row.prop(self, "tType", expand=True)
         row = col.row(align=True)
-        row.prop(self, "closed", toggle=True)
+        row.prop(self, "normalize", text="Norm", toggle=True)
         row.prop(self, "swap", toggle=True)
+        row.prop(self, "close", toggle=True)
 
-    def draw_buttons_ext(self, context, layout):
-        layout.prop(self, 'normalize')
-        layout.prop(self, 'normalize_size')
+    def update_sockets(self):
+        if self.normalize:
+            socket = self.inputs[-1]
+            socket.replace_socket("StringsSocket", "S").prop_name = "normalize_size"
+        else:  # AC
+            socket = self.inputs[-1]
+            socket.replace_socket("StringsSocket", "S").prop_name = "scale"
 
     def make_trochoid(self, R1, R2, H, P1, P2, T, N, S):
         '''
@@ -210,16 +219,16 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
 
         a, b, p1, p2 = [R2, R1, P2, P1] if self.swap else [R1, R2, P1, P2]
 
-        if self.normalize:  # normalize ON ? => scale to the normalize size
+        if self.normalize:  # normalize ? => set scale to fit the normalize size
             if self.tType == "EPI":
-                S = 1 / (abs(a + b) + H + EPS) * self.normalize_size
+                S = 1 / (abs(a + b) + H + epsilon) * S
             elif self.tType == "HYPO":
-                S = 1 / (abs(a - b) + H + EPS) * self.normalize_size
+                S = 1 / (abs(a - b) + H + epsilon) * S
             else:  # LINE
-                S = 1 / (2 * pi * a + H + EPS) * self.normalize_size
+                S = 1 / (2 * pi * a + H + epsilon) * S
 
         a = a * S
-        b = max(b * S, EPS)
+        b = max(b * S, epsilon) # safeguard to avoid division by zero
         h = H * S
 
         if self.tType == "EPI":
@@ -244,7 +253,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         verts = [v(n * dT) for n in range(N + 1)]
         edges = [[i, i + 1] for i in range(N)]
 
-        if self.closed:
+        if self.close:
             edges.append([N - 1, 0])
 
         return verts, edges
