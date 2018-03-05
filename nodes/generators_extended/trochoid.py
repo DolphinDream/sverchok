@@ -247,7 +247,8 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
 
         v = lambda t: [fx(t), fy(t), 0]
 
-        N = max(3, int(T * N))  # total number of points in all turns
+        # N = max(3, int(T * N))  # total number of points in all turns
+        N = max(3, int((a+b)/b*T * N))  # total number of points in all turns
         dT = 2 * pi * T / N
 
         verts = [v(n * dT) for n in range(N + 1)]
