@@ -494,13 +494,14 @@ class SvIconManagerPanel(bpy.types.Panel):
 
         iconManagerProps = context.space_data.node_tree.iconManagerProps
 
-        layout.prop(iconManagerProps, 'direction', expand=False)
-        layout.prop(iconManagerProps, 'center_grid')
-        layout.prop(iconManagerProps, 'separate_categories')
+        # NAVIGATION SETTINGS
+        box = layout.box()
+        box.label("Navigation Settings")
+        col = box.column()
 
-        layout.prop(iconManagerProps, "selected_category", text="")
+        col.prop(iconManagerProps, "selected_category", text="")
 
-        row = layout.row(align=True)
+        row = col.row(align=True)
         row.prop(iconManagerProps, "selected_icon", text="")
 
         prevIcon = row.operator('sv_icon_manager.navigate', text="", icon="PLAY_REVERSE")
@@ -512,14 +513,24 @@ class SvIconManagerPanel(bpy.types.Panel):
         col = row.column()
         col.operator("render.render", text="", icon='RENDER_STILL')
 
-        # grid settings
+        col = box.column()
+        col.prop(iconManagerProps, "relocate_3d_cursor")
+        col.prop(iconManagerProps, "auto_select_empty")
+
+        # GRID SETTINGS
         box = layout.box()
         box.label("Grid Settings")
+        col = box.column()
+
+        col.prop(iconManagerProps, 'direction', expand=False)
+        col.prop(iconManagerProps, 'center_grid')
+        col.prop(iconManagerProps, 'separate_categories')
+
         col = box.column()
         col.prop(iconManagerProps, "wrap")
         col.prop(iconManagerProps, "grid_scale")
 
-        # empty settings
+        # EMPTY SETTINGS
         box = layout.box()
         box.label("Empty Settings")
         row = box.row()
@@ -528,26 +539,19 @@ class SvIconManagerPanel(bpy.types.Panel):
         row = box.row()
         row.prop(iconManagerProps, "show_empty_names", text="Show Names")
 
-        # camera settings
+        # CAMERA SETTINGS
         box = layout.box()
         box.label("Camera Settings")
         row = box.row()
         cc = row.operator("sv_icon_manager.create_camera")
 
-        # rendering settings
+        # RENDERING SETTINGS
         box = layout.box()
         box.label("Render Settings")
         row = box.row()
         ri = row.operator("sv_icon_manager.render_icons")
         row = box.row()
         row.operator("render.render", text="Render", icon='RENDER_STILL')
-
-        # navigation settings
-        box = layout.box()
-        box.label("Navigation Settings")
-        col = box.column()
-        col.prop(iconManagerProps, "relocate_3d_cursor")
-        col.prop(iconManagerProps, "auto_select_empty")
 
 
 class SverchokIMRenderIcons(bpy.types.Operator):
