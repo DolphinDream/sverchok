@@ -57,7 +57,6 @@ orient_cell = {
 
 def make_tile(center, width, height):
     ''' make a tile mesh at given center with given weight and height '''
-
     cx, cy, cz = center
 
     verts = []
@@ -87,8 +86,9 @@ def read_icon_data():
     numCategories = len(data.keys())
     numIconsInCategories = [len(x) for x in data.values()]
 
-    print("There are %d categories of icons: %s" % (numCategories, list(data.keys())))
-    print("There are these number of icons in categories: ", numIconsInCategories)
+    if DEBUG:
+        print("There are %d categories of icons: %s" % (numCategories, list(data.keys())))
+        print("There are these number of icons in categories: ", numIconsInCategories)
 
     # cache the data into some useful hierarchies
     _icon_list["main"] = OrderedDict()
@@ -178,23 +178,17 @@ def update_icon_indices(wrap, separate):
             x = 0
             y = y + 1
 
-    # print("icon indices=", _icon_list["main"]["indices"])
-    # print("category icon indices=", _icon_list["main"]["categories"][category]["indices"])
 
-
-def get_output_socket_data(wrap, direction, grid_scale, center, separate_categories, current_icon):
-    ''' compute and return the output socket data'''
+def get_icon_grid_data(wrap, direction, grid_scale, center, separate_categories, current_icon):
+    ''' compute and return the icon grid data'''
 
     update_icon_indices(wrap, separate_categories)
 
     iconIndices = get_icon_indices()
     categoryIconIndices = get_category_icon_index_lists()
 
-    # print("categoryIconIndices =", categoryIconIndices)
     maxX = max(x for x, y in iconIndices) + 1
     maxY = max(y for x, y in iconIndices) + 1
-    # print("max x: ", maxX)
-    # print("max y: ", maxY)
 
     iconCenters = [(x * grid_scale, y * grid_scale, 0) for x, y in iconIndices]
 
@@ -214,8 +208,6 @@ def get_output_socket_data(wrap, direction, grid_scale, center, separate_categor
 
     # orient the cells based on given direction
     directionIndex = next(x[-1] for x in directionItems if x[0] == direction)
-    # print("direction = ", directionIndex)
-    # print("orient cell = ", orient_cell)
 
     orienter = orient_cell[directionIndex]
     iconCenters = [orienter(x, y, z) for x, y, z in iconCenters]
@@ -294,7 +286,8 @@ class SvIconManagerPanelProperties(bpy.types.PropertyGroup):
     ''' Manages SV icons '''
 
     def prev_icon(self, context):
-        print("Advancing to PREV icon")
+        if DEBUG:
+            print("Advancing to PREV icon")
         if self.selected_category == "All":
             iconNames = get_icon_names()
         else:
@@ -303,15 +296,11 @@ class SvIconManagerPanelProperties(bpy.types.PropertyGroup):
         iconIndex = iconNames.index(self.selected_icon)
         prevIconIndex = (iconIndex - 1) % len(iconNames)
         prevIconName = iconNames[prevIconIndex]
-
-        # print("Current icon: ", self.selected_icon)
-        # print("Current icon index: ", iconIndex)
-        # print("Prev icon index: ", prevIconIndex)
-        # print("Prev icon: ", prevIconName)
         self.selected_icon = prevIconName
 
     def next_icon(self, context):
-        print("Advancing to NEXT icon")
+        if DEBUG:
+            print("Advancing to NEXT icon")
         if self.selected_category == "All":
             iconNames = get_icon_names()
         else:
@@ -320,11 +309,6 @@ class SvIconManagerPanelProperties(bpy.types.PropertyGroup):
         iconIndex = iconNames.index(self.selected_icon)
         nextIconIndex = (iconIndex + 1) % len(iconNames)
         nextIconName = iconNames[nextIconIndex]
-
-        # print("Current icon: ", self.selected_icon)
-        # print("Current icon index: ", iconIndex)
-        # print("Next icon index: ", nextIconIndex)
-        # print("Next icon: ", nextIconName)
         self.selected_icon = nextIconName
 
     def selectedCategoryItems(self, context):
@@ -341,7 +325,6 @@ class SvIconManagerPanelProperties(bpy.types.PropertyGroup):
             iconNames = get_category_icon_names(self.selected_category)
             iconIDs = get_category_icon_ids(self.selected_category)
 
-        # iconItems = [(k, k.title(), "", "", i) for i, k in enumerate(iconNames)]
         iconItems = [(k, k.title(), "", custom_icon(iconIDs[iconNames.index(k)]), i) for i, k in enumerate(iconNames)]
         return iconItems
 
@@ -350,7 +333,8 @@ class SvIconManagerPanelProperties(bpy.types.PropertyGroup):
         self.process(context)
 
     def update_selected_category(self, context):
-        print("Selected category:", self.selected_category)
+        if DEBUG:
+            print("Selected category:", self.selected_category)
 
         if self.selected_category == "All":
             iconNames = get_icon_names()
@@ -362,8 +346,9 @@ class SvIconManagerPanelProperties(bpy.types.PropertyGroup):
         self.process(context)
 
     def update_selected_icon(self, context):
-        print("Selected icon:", self.selected_icon)
-        print("Selected category:", self.selected_category)
+        if DEBUG:
+            print("Selected icon:", self.selected_icon)
+            print("Selected category:", self.selected_category)
 
         if self.selected_category == "All":
             iconNames = get_icon_names()
@@ -385,36 +370,33 @@ class SvIconManagerPanelProperties(bpy.types.PropertyGroup):
         self.process(context)
 
     def update_empties(self, context):
-        print("update empties locations")
+        if DEBUG:
+            print("update empties locations")
         self.process(context)
 
     def process(self, context):
 
-        data = get_output_socket_data(self.wrap,
-                                      self.direction,
-                                      self.grid_scale,
-                                      self.center_grid,
-                                      self.separate_categories,
-                                      self.selected_icon)
+        data = get_icon_grid_data(self.wrap,
+                                  self.direction,
+                                  self.grid_scale,
+                                  self.center_grid,
+                                  self.separate_categories,
+                                  self.selected_icon)
 
         # locate empties to icon locations
-        # print("Relocating empties")
         objectNames = bpy.context.scene.objects.keys()
         iconIDs = get_icon_ids()
         for iconIndex, iconID in enumerate(iconIDs):
-            # print('iconIndex=', iconIndex)
-            # print('iconID=', iconID)
             if iconID in objectNames:
                 bpy.context.scene.objects[iconID].location = data["Icon Centers"][iconIndex]
 
         # update the 3D cursor location
         if self.relocate_3d_cursor:
-            print("relocating 3d cursor")
-            # c = get_current_icon_location()
+            if DEBUG:
+                print("relocating 3d cursor")
             c = _icon_list["main"]["Current Icon Location"]
             bpy.context.scene.cursor_location = c
 
-        print("object names=", objectNames)
         if "Camera SV" in objectNames:
             bpy.context.scene.objects["Camera SV"].location = data["Camera Location"]
 
@@ -445,10 +427,6 @@ class SvIconManagerPanelProperties(bpy.types.PropertyGroup):
 
     separate_categories = BoolProperty(
         name="Separate Categories", description="Separate the icons into categories",
-        default=True, update=process)
-
-    group_empties = BoolProperty(
-        name="Group in Categories", description="Group empties in categories",
         default=True, update=process)
 
     show_empty_names = BoolProperty(
@@ -559,7 +537,7 @@ class SverchokIMRenderIcons(bpy.types.Operator):
         iconIDs = get_icon_ids()
         for iconName, iconID in zip(iconNames, iconIDs):
             iconManager.selected_icon = iconName
-            print("Rendering icon: ", iconName)
+            if DEBUG: print("Rendering icon: ", iconName)
             # set the path/file
             bpy.context.scene.render.filepath = "/tmp/sverchokIcons/" + iconID.lower() + ".png"
             # Render still image, automatically write to output path
@@ -575,9 +553,7 @@ class SverchokIMCreateCamera(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        if "Camera SV" in context.scene.objects.keys():
-            print('Camera already created')
-        else:
+        if "Camera SV" not in context.scene.objects.keys():
             camera = bpy.data.cameras.new("Camera SV")
             camera.type = "ORTHO"
             camera.ortho_scale = 1
@@ -598,9 +574,6 @@ class SverchokIMCreateEmpties(bpy.types.Operator):
 
     def execute(self, context):
         iconManager = context.space_data.node_tree.iconManagerProps
-
-        print("type icon manager=", type(iconManager))
-        print("iconManager = ", iconManager)
 
         iconIDs = get_icon_ids()
 
@@ -645,7 +618,6 @@ class SverchokIMNavigateIcon(bpy.types.Operator):
 
 
 def register():
-    print("registering icon manager panel")
     bpy.utils.register_class(SverchokIMCreateCamera)
     bpy.utils.register_class(SverchokIMRenderIcons)
     bpy.utils.register_class(SverchokIMCreateEmpties)
