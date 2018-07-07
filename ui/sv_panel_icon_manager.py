@@ -418,10 +418,6 @@ class SvIconManagerPanelProperties(bpy.types.PropertyGroup):
         if "Camera SV" in objectNames:
             bpy.context.scene.objects["Camera SV"].location = data["Camera Location"]
 
-    debugging = BoolProperty(
-        name="Debug Mode", description="Add extra features for debugging",
-        default=True, update=process)
-
     direction = EnumProperty(
         name="Direction",
         default="EAST_NORTH", items=directionItems,
@@ -450,10 +446,6 @@ class SvIconManagerPanelProperties(bpy.types.PropertyGroup):
     separate_categories = BoolProperty(
         name="Separate Categories", description="Separate the icons into categories",
         default=True, update=process)
-
-    category_spacing = FloatProperty(
-        name="Category Spacing", description="Space between category boxes",
-        default=1.0, min=0.0, update=process)
 
     group_empties = BoolProperty(
         name="Group in Categories", description="Group empties in categories",
