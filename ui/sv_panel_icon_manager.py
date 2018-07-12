@@ -56,7 +56,7 @@ orient_cell = {
 
 
 def make_tile(center, width, height):
-    ''' make a tile mesh at given center with given weight and height '''
+    ''' Make a tile mesh at given center with given weight and height '''
     cx, cy, cz = center
 
     verts = []
@@ -72,7 +72,7 @@ def make_tile(center, width, height):
 
 
 def read_icon_data():
-    ''' read the icon data from file and cache it '''
+    ''' Read the icon data from file and cache it '''
     if _icon_list:
         return
 
@@ -163,7 +163,7 @@ def update_icon_indices(wrap, separate):
 
         iconIndices = []
         for iconName, iconID in iconPairs.items():
-            if x == wrap:  # wrap ?
+            if x == wrap:  # reached the wrap limit ? => start a new line
                 x = 1
                 y = y + 1
             else:  # no wrap yet
@@ -180,8 +180,7 @@ def update_icon_indices(wrap, separate):
 
 
 def get_icon_grid_data(wrap, direction, grid_scale, center, separate_categories, current_icon):
-    ''' compute and return the icon grid data'''
-
+    ''' Compute and return the icon grid data'''
     update_icon_indices(wrap, separate_categories)
 
     iconIndices = get_icon_indices()
@@ -283,33 +282,22 @@ def get_icon_grid_data(wrap, direction, grid_scale, center, separate_categories,
 
 
 class SvIconManagerPanelProperties(bpy.types.PropertyGroup):
-    ''' Manages SV icons '''
+    ''' Manages SV Icons '''
 
-    def prev_icon(self, context):
+    def navigate_icon(self, context, direction):
         if DEBUG:
-            print("Advancing to PREV icon")
+            print("Advancing to %s icon" % direction)
+
         if self.selected_category == "All":
             iconNames = get_icon_names()
         else:
             iconNames = get_category_icon_names(self.selected_category)
 
+        delta = +1 if direction == "NEXT" else -1
         iconIndex = iconNames.index(self.selected_icon)
-        prevIconIndex = (iconIndex - 1) % len(iconNames)
+        prevIconIndex = (iconIndex + delta) % len(iconNames)
         prevIconName = iconNames[prevIconIndex]
         self.selected_icon = prevIconName
-
-    def next_icon(self, context):
-        if DEBUG:
-            print("Advancing to NEXT icon")
-        if self.selected_category == "All":
-            iconNames = get_icon_names()
-        else:
-            iconNames = get_category_icon_names(self.selected_category)
-
-        iconIndex = iconNames.index(self.selected_icon)
-        nextIconIndex = (iconIndex + 1) % len(iconNames)
-        nextIconName = iconNames[nextIconIndex]
-        self.selected_icon = nextIconName
 
     def selectedCategoryItems(self, context):
         categories = ["All"]
@@ -475,10 +463,10 @@ class SvIconManagerPanel(bpy.types.Panel):
         row.prop(iconManagerProps, "selected_icon", text="")
 
         prevIcon = row.operator('sv_icon_manager.navigate', text="", icon="PLAY_REVERSE")
-        prevIcon.navigate = "PREV"
+        prevIcon.direction = "PREV"
 
         nextIcon = row.operator('sv_icon_manager.navigate', text="", icon="PLAY")
-        nextIcon.navigate = "NEXT"
+        nextIcon.direction = "NEXT"
 
         col = row.column()
         col.operator("render.render", text="", icon='RENDER_STILL')
@@ -537,7 +525,8 @@ class SverchokIMRenderIcons(bpy.types.Operator):
         iconIDs = get_icon_ids()
         for iconName, iconID in zip(iconNames, iconIDs):
             iconManager.selected_icon = iconName
-            if DEBUG: print("Rendering icon: ", iconName)
+            if DEBUG:
+                print("Rendering icon: ", iconName)
             # set the path/file
             bpy.context.scene.render.filepath = "/tmp/sverchokIcons/" + iconID.lower() + ".png"
             # Render still image, automatically write to output path
@@ -604,15 +593,11 @@ class SverchokIMNavigateIcon(bpy.types.Operator):
     bl_label = "Navigate icons"
     bl_options = {'REGISTER', 'UNDO'}
 
-    navigate = StringProperty(name='navigate')
+    direction = StringProperty(name='direction')
 
     def execute(self, context):
         iconManager = context.space_data.node_tree.iconManagerProps
-
-        if self.navigate == "NEXT":
-            iconManager.next_icon(context)
-        elif self.navigate == "PREV":
-            iconManager.prev_icon(context)
+        iconManager.navigate_icon(context, self.direction)
 
         return {'FINISHED'}
 
