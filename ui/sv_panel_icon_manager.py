@@ -295,9 +295,11 @@ class SvIconManagerPanelProperties(bpy.types.PropertyGroup):
 
         delta = +1 if direction == "NEXT" else -1
         iconIndex = iconNames.index(self.selected_icon)
-        prevIconIndex = (iconIndex + delta) % len(iconNames)
-        prevIconName = iconNames[prevIconIndex]
-        self.selected_icon = prevIconName
+        newIconIndex = (iconIndex + delta) % len(iconNames)
+        newIconName = iconNames[newIconIndex]
+        self.selected_icon = newIconName
+
+        self.update_metronom = not self.update_metronom
 
     def selectedCategoryItems(self, context):
         categories = ["All"]
@@ -361,6 +363,10 @@ class SvIconManagerPanelProperties(bpy.types.PropertyGroup):
         if DEBUG:
             print("update empties locations")
         self.process(context)
+
+    def update_now(self, context):
+        print("checking to update")
+        self.update_metronom = not self.update_metronom
 
     def process(self, context):
 
@@ -429,6 +435,9 @@ class SvIconManagerPanelProperties(bpy.types.PropertyGroup):
         name="Relocate 3D Cursor", description="Relocate 3D cursor with Icon navigation",
         default=True, update=process)
 
+    update_metronom = BoolProperty(
+        name="Update Metronom", description="Update cycle",
+        default=False, update=update_now)
 
 class SvIconManagerPanel(bpy.types.Panel):
     bl_idname = "sv_icon_manager.panel"
