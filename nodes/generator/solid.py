@@ -41,7 +41,7 @@ logger.setLevel(logging.WARNING)
 PHI = (1 + sqrt(5)) / 2
 phi = 1 / PHI
 
-sizeItems = [("EL", "Edge Length", ""), # edge lenght
+sizeItems = [("EL", "Edge Length", ""),  # edge lenght
              # Non Truncated spheres
              ("NF", "NT Face Sphere Radius", ""),  # face sphere
              ("NE", "NT Edge Sphere Radius", ""),  # edge sphere
@@ -221,6 +221,7 @@ def get_radius(plato, truncation, rID, vt, et):
             Rv = sqrt(6) / 4
         elif truncation == "VT":
             Rf = 1 / 2 * (sqrt(3 / 2) - sqrt(2 / 3) * vt)
+            # Rf = 1 / 2 * sqrt(3 / 2 - 2 * vt + vt * vt * 2 / 3)
             Re = 1 / 2 * sqrt(3 / 2 - 2 * vt + vt * vt * 3 / 4)
             Rv = 1 / 2 * sqrt(3 / 2 - 2 * vt + vt * vt * 4 / 4)
         elif truncation == "ET":
@@ -234,7 +235,8 @@ def get_radius(plato, truncation, rID, vt, et):
             Re = sqrt(2) / 2
             Rv = sqrt(3) / 2
         elif truncation == "VT":
-            Rf = sqrt(3) / 2 * (1 - 1 / 3 * vt)
+            Rf = 1 / 2 * sqrt(3) * (1 - 1 / 3 * vt)
+            # Rf = 1 / 2 * sqrt(3 - 2 * vt + vt * vt * 1 / 3)
             Re = 1 / 2 * sqrt(3 - 2 * vt + vt * vt * 1 / 2)
             Rv = 1 / 2 * sqrt(3 - 2 * vt + vt * vt * 2 / 2)
         elif truncation == "ET":
@@ -248,7 +250,8 @@ def get_radius(plato, truncation, rID, vt, et):
             Re = 1 / 2
             Rv = sqrt(2) / 2
         elif truncation == "VT":
-            Rf = sqrt(2) / 2 * (1 - vt / 2)
+            Rf = 1 / 2 * sqrt(2) * (1 - vt / 2)
+            # Rf = 1 / 2 * sqrt(2 - 2 * vt + vt * vt * 2 / 4)
             Re = 1 / 2 * sqrt(2 - 2 * vt + vt * vt * 3 / 4)
             Rv = 1 / 2 * sqrt(2 - 2 * vt + vt * vt * 4 / 4)
         elif truncation == "ET":
@@ -263,8 +266,8 @@ def get_radius(plato, truncation, rID, vt, et):
             Rv = 1 / 2 * sqrt(3) * PHI
         elif truncation == "VT":
             Rf = 1 / 2 * (sqrt(3) * PHI - sqrt((2 - PHI) / 3) * vt)
-            Re = 1
-            Rv = 1 / 2 * sqrt(3 + 3 * PHI - 2 * vt +  vt * vt)
+            Re = 1 / 2 * sqrt(3 + 3 * PHI - 2 * vt + vt * vt * (3 - PHI) / 4)
+            Rv = 1 / 2 * sqrt(3 + 3 * PHI - 2 * vt + vt * vt)
         elif truncation == "ET":
             Rf = 1
             Re = 1
@@ -276,11 +279,9 @@ def get_radius(plato, truncation, rID, vt, et):
             Re = 1 / 2 * PHI
             Rv = 1 / 2 * sqrt(PHI + 2)
         elif truncation == "VT":
-            # Rf = 1 / 2 * (sqrt(2 + PHI) - sqrt(2 - PHI) / sqrt(3 - PHI) * vt)
             Rf = 1 / 2 * (sqrt(2 + PHI) - sqrt((3 - PHI) / 5) * vt)
-            Re = 1
-            # Rv = 1 / 2 * sqrt(2 + PHI - 2 * vt + (1 - PHI) / (3 - PHI) * vt * vt)
-            Rv = 1 / 2 * sqrt(2 + PHI - 2 * vt + (1 - 2 * PHI) / 5 * vt * vt)
+            Re = 1 / 2 * sqrt(2 + PHI - 2 * vt + vt * vt * 3 / 4)
+            Rv = 1 / 2 * sqrt(2 + PHI - 2 * vt + vt * vt * 4 / 4)
         elif truncation == "ET":
             Rf = 1
             Re = 1
@@ -757,7 +758,7 @@ def make_edge_trucated_solid(plato, eTrunc, snub):
                     newFace.append(vjiID)
         newFaces.append(newFace)
 
-    # generate FACES & EDGES
+    # generate (edge) FACES & EDGES
     for e in nEdges:
         i, j = e
 
@@ -850,9 +851,9 @@ def make_solid(sType, dual, snub, scaleRadius, size, vTrunc, eTrunc):
     # resize (scale continuity)
     if vTrunc > 0.5:
 
-        # for continuity we need to match the following:
-        # VT FACE radius of the DUAL solid
-        # NT FACE radius of the MAIN solid
+        # for continuity we need to match the following two:
+        # the VT FACE radius of the DUAL solid
+        # the NT FACE radius of the MAIN solid
         r1 = get_radius(sType, "NT", "RF", vTrunc, eTrunc)
         r2 = get_radius(dualPairs[sType], "VT", "RF", 1 - vTrunc, eTrunc)
 
