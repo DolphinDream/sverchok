@@ -38,27 +38,21 @@ terminal.setFormatter(formatter)
 logger.addHandler(terminal)
 logger.setLevel(logging.WARNING)
 
-PHI = (1 + sqrt(5)) / 2
-phi = 1 / PHI
+PHI = (1 + sqrt(5)) / 2  # the golden ratio
 
-sizeItems = [("EL", "Edge Length", ""),  # edge lenght
-             # Non Truncated spheres
-             ("NF", "NT Face Sphere Radius", ""),  # face sphere
-             ("NE", "NT Edge Sphere Radius", ""),  # edge sphere
-             ("NV", "NT Vert Sphere Radius", ""),  # vert sphere
-             # Vertex Truncated spheres
-             ("VF", "VT Face Sphere Radius", ""),  # face sphere
-             ("VE", "VT Edge Sphere Radius", ""),  # edge sphere
-             ("VV", "VT Vert Sphere Radius", ""),  # vert sphere
-             # Edge Truncated spheres
-             ("EF", "ET Face Sphere Radius", ""),  # face sphere
-             ("EE", "ET Edge Sphere Radius", ""),  # edge sphere
-             ("EV", "ET Vert Sphere Radius", "")]  # vert sphere
-
-scaleRadiiItems = [("N", "N", ""),
-                   ("RF", "F", ""),
-                   ("RE", "E", ""),
-                   ("RV", "V", "")]
+sizeItems = [("NTEL", "NT Edge Length", ""),  # edge length
+             # Non Truncated solid spheres
+             ("NTRF", "NT Face Sphere Radius", ""),  # face sphere
+             ("NTRE", "NT Edge Sphere Radius", ""),  # edge sphere
+             ("NTRV", "NT Vert Sphere Radius", ""),  # vert sphere
+             # Vertex Truncated solid spheres
+             ("VTRF", "VT Face Sphere Radius", ""),  # face sphere
+             ("VTRE", "VT Edge Sphere Radius", ""),  # edge sphere
+             ("VTRV", "VT Vert Sphere Radius", ""),  # vert sphere
+             # Edge Truncated solid spheres
+             ("ETRF", "ET Face Sphere Radius", ""),  # face sphere
+             ("ETRE", "ET Edge Sphere Radius", ""),  # edge sphere
+             ("ETRV", "ET Vert Sphere Radius", "")]  # vert sphere
 
 outRadiiItems = [("RF", "F", "", 0),
                  ("RE", "E", "", 1),
@@ -820,10 +814,12 @@ def make_edge_trucated_solid(plato, eTrunc, snub):
     compute_edge_centers(plato, "ET", "DUAL")
 
 
-def make_solid(sType, dual, snub, scaleRadius, size, vTrunc, eTrunc):
+def make_solid(flags, size, vTrunc, eTrunc):
     ''' Make a solid '''
     # the truncation of the MAIN platonic solid for vTrunc > 0.5 is equivalent to
     # the truncation of the DUAL of the platonic solid for 1-vTrunc
+
+    sType, dual, snub, sizeItem = flags
 
     logger.info("make_solid for: %s, %s, %s, %.2f, %.2f, %.2f" % (sType, dual, snub, size, vTrunc, eTrunc))
 
@@ -840,6 +836,10 @@ def make_solid(sType, dual, snub, scaleRadius, size, vTrunc, eTrunc):
 
     truncation = "NT" if vTrunc in [0, 1] else "VT" if eTrunc == 0 else "ET"
 
+    vn = solids_data[sType]["NT"]["MAIN"]["VERTS"]
+    en = solids_data[sType]["NT"]["MAIN"]["EDGES"]
+    fn = solids_data[sType]["NT"]["MAIN"]["FACES"]
+
     v1 = solids_data[plato][truncation]["MAIN"]["VERTS"]
     e1 = solids_data[plato][truncation]["MAIN"]["EDGES"]
     f1 = solids_data[plato][truncation]["MAIN"]["FACES"]
@@ -848,9 +848,10 @@ def make_solid(sType, dual, snub, scaleRadius, size, vTrunc, eTrunc):
     e2 = solids_data[plato][truncation]["DUAL"]["EDGES"]
     f2 = solids_data[plato][truncation]["DUAL"]["FACES"]
 
+    size1 = size
+
     # resize (scale continuity)
     if vTrunc > 0.5:
-
         # for continuity we need to match the following two:
         # the VT FACE radius of the DUAL solid
         # the NT FACE radius of the MAIN solid
@@ -859,47 +860,22 @@ def make_solid(sType, dual, snub, scaleRadius, size, vTrunc, eTrunc):
 
         size = size * r1 / r2
 
-        # if dualPairs[sType] == "HEXAHEDRON":
-        #     logger.debug("sizing HEXAHEDRON")
-        #     size = size * r1 / ((1 + 2 * vTrunc) / 3)
+    if sizeItem != "NTEL":
+        truncation = sizeItem[0:2]  # NT, VT or ET
+        radius = sizeItem[2:4]  # RF, RE or RV
+        print("truncation = ", truncation)
+        print("radius = ", radius)
+        r1 = get_radius(sType, "NT", "RV", vTrunc, eTrunc)
+        r2 = get_radius(sType, truncation, radius, vTrunc, eTrunc)
 
-        # elif dualPairs[sType] == "OCTAHEDRON":
-        #     logger.debug("sizing OCTAHEDRON")
-        #     size = size * r1 / vTrunc
+        size = size / r2
+        size1 = size1 / r2
 
-        # elif dualPairs[sType] == "TETRVHEDRON":
-        #     logger.debug("sizing TETRAHEDRON")
-        #     size = size * r1 / ((4 * vTrunc - 1) / 3)
-
-        # elif dualPairs[sType] == "DODECAHEDRON":
-        #     logger.debug("sizing DODECAHEDRON")
-        #     size = size * r1 / (1 - 2 / 3 * sqrt(2 - PHI) / PHI * (1 - vTrunc))
-        #     logger.debug("size=", size)
-
-        # elif dualPairs[sType] == "ICOSAHEDRON":
-        #     logger.debug("sizing ICOSAHEDRON")
-        #     size = size * r1 / (1 - 2 * sqrt((2 - PHI) / 5) * (1 - vTrunc))
-        #     logger.debug("size=", size)
-
-        # else:
-        #     logger.debug("sizing NOTHING")
-        # size = size
-
-    # print("scaleRadius = ", scaleRadius)
-
-    # if vTrunc > 0.5:
-    #     scale = get_radius(dualPairs[sType], "VT", scaleRadius, 1-vTrunc, eTrunc)
-    # else:
-    #     scale = get_radius(sType, "VT", scaleRadius, vTrunc, eTrunc)
-
-    # scale = get_radius(sType, "VT", scaleRadius, vTrunc, eTrunc)
-
-    # size = size / scale
-
+    vn = [tuple(Vector(v) * size1) for v in vn]
     v1 = [tuple(Vector(v) * size) for v in v1]
     v2 = [tuple(Vector(v) * size) for v in v2]
 
-    data = [v2, e2, f2, v1, e1, f1] if dual else [v1, e1, f1, v2, e2, f2]
+    data = [v2, e2, f2, v1, e1, f1, vn, en, fn] if dual else [v1, e1, f1, v2, e2, f2, vn, en, fn]
 
     return data
 
@@ -957,15 +933,10 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
         description="Type of the output",
         default="FACE CENTERS", update=update_solid)
 
-    scaleRadii = EnumProperty(
-        name="Scale Radii", items=scaleRadiiItems,
-        description="Scale plato solid to in, mid or out radius",
-        default="RV", update=update_solid)
-
     sizeItem = EnumProperty(
         name="Size Item", items=sizeItems,
         description="Item to size",
-        default="EL", update=update_solid)
+        default="NTEL", update=update_solid)
 
     outRadii = EnumProperty(
         name="Out Radii", items=outRadiiItems,
@@ -987,7 +958,7 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
         default="N", update=update_solid)
 
     size = FloatProperty(
-        name='Size', description='Size of the solid',
+        name='Size', description='Size of the current solid component',
         default=1.0, min=0.0, update=update_solid)
 
     vTrunc = FloatProperty(
@@ -1034,27 +1005,21 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
         layout.prop(self, 'preset', text="")
         layout.prop(self, 'sType')
         layout.prop(self, 'oType')
-        # layout.prop(self, 'scaleRadii', expand=True)
         layout.prop(self, 'sizeItem', expand=False)
-        layout.prop(self, 'snub', expand=True)
+        layout.prop(self, 'snub', expand=False)
         layout.prop(self, "dual")
 
     def draw_buttons_ext(self, context, layout):
-        layout.prop(self, 'truncationType', expand=True)
-        layout.prop(self, 'outRadii', expand=True)
+        col = layout.column(align=True)
+        row = col.row(align=True)
+        row.prop(self, 'truncationType', expand=True)
+        row = col.row(align=True)
+        row.prop(self, 'outRadii', expand=True)
 
     def process(self):
         # return if no outputs are connected
         if not any(s.is_linked for s in self.outputs):
             return
-
-        # input_P = self.inputs["P"].sv_get()[0][0]  # p Index
-
-        # print("P = ", input_P)
-        # print("updating preset : ", input_P)
-        # items = self.preset_items(context)
-        # nextIndex = 1 + (int(input_P) - 1) % (len(items)-1)
-        # self.preset = items[nextIndex][0]
 
         # input values lists (single or multi value)
         input_S = self.inputs["S"].sv_get()[0]  # size
@@ -1072,27 +1037,11 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
 
         mainVertList, mainEdgeList, mainPolyList = [[], [], []]
         pairVertList, pairEdgeList, pairPolyList = [[], [], []]
+        origVertList, origEdgeList, origPolyList = [[], [], []]
         for s, v, e in zip(*parameters):
-            data = make_solid(self.sType, self.dual, self.snub, self.scaleRadii, s, v, e)
-            mainVerts, mainEdges, mainPolys, pairVerts, pairEdges, pairPolys = data
-
-            if self.sizeItem != "EL":
-                truncation = self.sizeItem[0] + "T"
-                radius = "R" + self.sizeItem[1]
-                print("truncation = ", truncation)
-                print("radius = ", radius)
-                r1 = get_radius(self.sType, "NT", "RV", v, e)
-                r2 = get_radius(self.sType, truncation, radius, v, e)
-
-                # print("truncationType = ", self.truncationType)
-                # print("outRadii = ", self.outRadii)
-                # r1 = get_radius(self.sType, "NT", "RV", v, e)
-                # r2 = get_radius(self.sType, self.truncationType, self.outRadii, v, e)
-                # r2 = 1
-                # r1 = 1
-                size = s / r2
-                mainVerts = [tuple(Vector(vert) * size) for vert in mainVerts]
-                pairVerts = [tuple(Vector(vert) * size) for vert in pairVerts]
+            flags = [self.sType, self.dual, self.snub, self.sizeItem]
+            data = make_solid(flags, s, v, e)
+            mainVerts, mainEdges, mainPolys, pairVerts, pairEdges, pairPolys, origVerts, origEdges, origPolys = data
 
             mainVertList.append(mainVerts)
             mainEdgeList.append(mainEdges)
@@ -1102,6 +1051,10 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
             pairEdgeList.append(pairEdges)
             pairPolyList.append(pairPolys)
 
+            origVertList.append(origVerts)
+            origEdgeList.append(origEdges)
+            origPolyList.append(origPolys)
+
         self.outputs['Main Verts'].sv_set(mainVertList)
         self.outputs['Main Edges'].sv_set(mainEdgeList)
         self.outputs['Main Polys'].sv_set(mainPolyList)
@@ -1110,27 +1063,11 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
         self.outputs['Pair Edges'].sv_set(pairEdgeList)
         self.outputs['Pair Polys'].sv_set(pairPolyList)
 
+        self.outputs['Original Verts'].sv_set(origVertList)
+        self.outputs['Original Edges'].sv_set(origEdgeList)
+        self.outputs['Original Polys'].sv_set(origPolyList)
+
         make_platonic_solid(self.sType)
-
-        originalVerts = solids_data[self.sType]["NT"]["MAIN"]["VERTS"]
-        originalEdges = solids_data[self.sType]["NT"]["MAIN"]["EDGES"]
-        originalPolys = solids_data[self.sType]["NT"]["MAIN"]["FACES"]
-
-        size = 1
-        if self.scaleRadii == "RF":  # in
-            size = size / radii[self.sType][0]
-        elif self.scaleRadii == "RE":  # mid
-            size = size / radii[self.sType][1]
-        elif self.scaleRadii == "RV":  # out
-            size = size / radii[self.sType][2]
-        else:
-            size = size  # no scaling
-
-        originalVerts = [tuple(Vector(v) * size) for v in originalVerts]
-
-        self.outputs['Original Verts'].sv_set([originalVerts])
-        self.outputs['Original Edges'].sv_set([originalEdges])
-        self.outputs['Original Polys'].sv_set([originalPolys])
 
         if self.outputs['Other Verts'].is_linked:
 
@@ -1180,6 +1117,7 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
         else:
             self.outputs["Names"].sv_set([["alpha", "omega"]])
 
+        size = 1
         radius = get_radius(self.sType, self.truncationType, self.outRadii, input_V[0], input_E[0])
         radius = radius * size
         self.outputs["Radius"].sv_set([[radius]])
