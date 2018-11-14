@@ -278,8 +278,8 @@ def get_radius(plato, truncation, rID, vt, et):
             Rv = 1 / 2 * sqrt(2 + PHI - 2 * vt + vt * vt * 4 / 4)
         elif truncation == "ET":
             Rf = 1
-            Re = 1
-            Rv = 1
+            Re = 1 / 2 * sqrt(2 + PHI - 2 * vt + vt * vt * (1 - et / 2 + et * et * (3 - PHI) / 16))
+            Rv = 1 / 2 * sqrt(2 + PHI - 2 * vt + vt * vt * (1 - et / 2 + et * et * 1 / 4))
 
     if rID == "RF":
         return Rf
