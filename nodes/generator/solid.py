@@ -54,6 +54,21 @@ sizeItems = [("NTEL", "NT Edge Length", ""),  # edge length
              ("ETRE", "ET Edge Sphere Radius", ""),  # edge sphere
              ("ETRV", "ET Vert Sphere Radius", "")]  # vert sphere
 
+altaItems = [("NT", "Non Truncated Solid", ""),
+             # Vertex Truncated solid
+             ("VT", "Vertex Truncated Solid", ""),
+             ("VTVF", "Vertex Truncated Vert Faces", ""),
+             ("VTFF", "Vertex Truncated Face Faces", ""),
+             # Edge Truncated solid
+             ("ET", "Edge Truncated Solid", ""),
+             ("ETVF", "Edge Truncated Vert Faces", ""),
+             ("ETEF", "Edge Truncated Edge Faces", ""),
+             ("ETFF", "Edge Truncated Face Faces", ""),
+             # Dual Pair solid
+             ("DUNT", "Dual NT Pair Solid", ""),
+             ("DUVT", "Dual VT Pair Solid", ""),
+             ("DUET", "Dual ET Pair Solid", "")]
+
 outRadiiItems = [("RF", "F", "", 0),
                  ("RE", "E", "", 1),
                  ("RV", "V", "", 2)]
@@ -214,8 +229,7 @@ def get_radius(plato, truncation, rID, vt, et):
             Re = sqrt(2) / 4
             Rv = sqrt(6) / 4
         elif truncation == "VT":
-            Rf = 1 / 2 * (sqrt(3 / 2) - sqrt(2 / 3) * vt)
-            # Rf = 1 / 2 * sqrt(3 / 2 - 2 * vt + vt * vt * 2 / 3)
+            Rf = 1 / 2 * sqrt(3 / 2 - 2 * vt + vt * vt * 2 / 3)
             Re = 1 / 2 * sqrt(3 / 2 - 2 * vt + vt * vt * 3 / 4)
             Rv = 1 / 2 * sqrt(3 / 2 - 2 * vt + vt * vt * 4 / 4)
         elif truncation == "ET":
@@ -229,8 +243,7 @@ def get_radius(plato, truncation, rID, vt, et):
             Re = sqrt(2) / 2
             Rv = sqrt(3) / 2
         elif truncation == "VT":
-            Rf = 1 / 2 * sqrt(3) * (1 - 1 / 3 * vt)
-            # Rf = 1 / 2 * sqrt(3 - 2 * vt + vt * vt * 1 / 3)
+            Rf = 1 / 2 * sqrt(3 - 2 * vt + vt * vt * 1 / 3)
             Re = 1 / 2 * sqrt(3 - 2 * vt + vt * vt * 1 / 2)
             Rv = 1 / 2 * sqrt(3 - 2 * vt + vt * vt * 2 / 2)
         elif truncation == "ET":
@@ -244,8 +257,7 @@ def get_radius(plato, truncation, rID, vt, et):
             Re = 1 / 2
             Rv = sqrt(2) / 2
         elif truncation == "VT":
-            Rf = 1 / 2 * sqrt(2) * (1 - vt / 2)
-            # Rf = 1 / 2 * sqrt(2 - 2 * vt + vt * vt * 2 / 4)
+            Rf = 1 / 2 * sqrt(2 - 2 * vt + vt * vt * 2 / 4)
             Re = 1 / 2 * sqrt(2 - 2 * vt + vt * vt * 3 / 4)
             Rv = 1 / 2 * sqrt(2 - 2 * vt + vt * vt * 4 / 4)
         elif truncation == "ET":
@@ -591,8 +603,8 @@ def make_vertex_trucated_solid(plato, vTrunc):
     solids_data[plato]["VT"] = {}  # VERTEX-TRUNCATED mesh data
     solids_data[plato]["VT"]["V FACE"] = {}  # book-keeping (truncated vertex face)
     solids_data[plato]["VT"]["EV MAP"] = {}  # book-keeping map (edge to truncated edge)
-    solids_data[plato]["VT"]["E EDGE"] = {}  # book-keeping map
-    solids_data[plato]["VT"]["F FACE"] = {}  # book-keeping map
+    solids_data[plato]["VT"]["E EDGE"] = {}  # book-keeping map (not used)
+    solids_data[plato]["VT"]["F FACE"] = {}  # book-keeping map (not used)
 
     solids_data[plato]["VT"]["VF"] = []  # vert faces subset of all faces
     solids_data[plato]["VT"]["EF"] = []  # face faces subset of all faces
@@ -859,7 +871,7 @@ def make_solid(flags, size, vTrunc, eTrunc):
     # the truncation of the MAIN platonic solid for vTrunc > 0.5 is equivalent to
     # the truncation of the DUAL of the platonic solid for 1-vTrunc
 
-    sType, dual, snub, sizeItem = flags
+    sType, dual, snub, sizeItem, alta = flags
 
     logger.info("make_solid for: %s, %s, %s, %.2f, %.2f, %.2f" % (sType, dual, snub, size, vTrunc, eTrunc))
 
@@ -878,10 +890,6 @@ def make_solid(flags, size, vTrunc, eTrunc):
 
     truncation = "NT" if vTrunc in [0, 1] else "VT" if eTrunc == 0 else "ET"
 
-    vn = solids_data[sType]["NT"]["MAIN"]["VERTS"]
-    en = solids_data[sType]["NT"]["MAIN"]["EDGES"]
-    fn = solids_data[sType]["NT"]["MAIN"]["FACES"]
-
     v1 = solids_data[plato][truncation]["MAIN"]["VERTS"]
     e1 = solids_data[plato][truncation]["MAIN"]["EDGES"]
     f1 = solids_data[plato][truncation]["MAIN"]["FACES"]
@@ -890,9 +898,57 @@ def make_solid(flags, size, vTrunc, eTrunc):
     e2 = solids_data[plato][truncation]["DUAL"]["EDGES"]
     f2 = solids_data[plato][truncation]["DUAL"]["FACES"]
 
+    if alta == "NT":
+        vn = solids_data[sType]["NT"]["MAIN"]["VERTS"]
+        en = solids_data[sType]["NT"]["MAIN"]["EDGES"]
+        fn = solids_data[sType]["NT"]["MAIN"]["FACES"]
+
+    elif alta == "VT":
+        vn = solids_data[sType]["VT"]["MAIN"]["VERTS"]
+        en = solids_data[sType]["VT"]["MAIN"]["EDGES"]
+        fn = solids_data[sType]["VT"]["MAIN"]["FACES"]
+    elif alta == "VTVF":
+        vn = solids_data[sType]["VT"]["MAIN"]["VERTS"]
+        en = solids_data[sType]["VT"]["VF"]
+        fn = solids_data[sType]["VT"]["VF"]
+    elif alta == "VTFF":
+        vn = solids_data[sType]["VT"]["MAIN"]["VERTS"]
+        en = solids_data[sType]["VT"]["FF"]
+        fn = solids_data[sType]["VT"]["FF"]
+
+    elif alta == "ET":
+        vn = solids_data[sType]["ET"]["MAIN"]["VERTS"]
+        en = solids_data[sType]["ET"]["MAIN"]["EDGES"]
+        fn = solids_data[sType]["ET"]["MAIN"]["FACES"]
+    elif alta == "ETVF":
+        vn = solids_data[sType]["ET"]["MAIN"]["VERTS"]
+        en = solids_data[sType]["ET"]["VF"]
+        fn = solids_data[sType]["ET"]["VF"]
+    elif alta == "ETEF":
+        vn = solids_data[sType]["ET"]["MAIN"]["VERTS"]
+        en = solids_data[sType]["ET"]["EF"]
+        fn = solids_data[sType]["ET"]["EF"]
+    elif alta == "ETFF":
+        vn = solids_data[sType]["ET"]["MAIN"]["VERTS"]
+        en = solids_data[sType]["ET"]["FF"]
+        fn = solids_data[sType]["ET"]["FF"]
+
+    elif alta == "DUNT":
+        vn = solids_data[sType]["NT"]["DUAL"]["VERTS"]
+        en = solids_data[sType]["NT"]["DUAL"]["EDGES"]
+        fn = solids_data[sType]["NT"]["DUAL"]["FACES"]
+    elif alta == "DUVT":
+        vn = solids_data[sType]["VT"]["DUAL"]["VERTS"]
+        en = solids_data[sType]["VT"]["DUAL"]["EDGES"]
+        fn = solids_data[sType]["VT"]["DUAL"]["FACES"]
+    elif alta == "DUET":
+        vn = solids_data[sType]["ET"]["DUAL"]["VERTS"]
+        en = solids_data[sType]["ET"]["DUAL"]["EDGES"]
+        fn = solids_data[sType]["ET"]["DUAL"]["FACES"]
+
     size1 = size
 
-    # resize (scale continuity)
+    # resize (main->dual scale continuity)
     if vTrunc > 0.5:
         # for continuity we need to match the following two:
         # the VT FACE radius of the DUAL solid
@@ -1007,6 +1063,11 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
         description="Truncation NT, VT, ET",
         default="NT", update=update_solid)
 
+    alta = EnumProperty(
+        name="Alternative VEP", items=altaItems,
+        description="Alternative components of the truncation",
+        default="NT", update=update_solid)
+
     dual = BoolProperty(
         name='Dual', description='Dual of solid',
         default=False, update=update_solid)
@@ -1050,13 +1111,13 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
         self.outputs.new('StringsSocket',  "Pair Edges")
         self.outputs.new('StringsSocket',  "Pair Polys")
 
-        self.outputs.new('VerticesSocket', "Original Verts")
-        self.outputs.new('StringsSocket',  "Original Edges")
-        self.outputs.new('StringsSocket',  "Original Polys")
+        self.outputs.new('VerticesSocket', "Alta Verts")
+        self.outputs.new('StringsSocket',  "Alta Edges")
+        self.outputs.new('StringsSocket',  "Alta Polys")
 
-        self.outputs.new('VerticesSocket',  "Other Verts")
-        self.outputs.new('StringsSocket',  "Other Edges")
-        self.outputs.new('StringsSocket',  "Other Faces")
+        # self.outputs.new('VerticesSocket', "Other Verts")
+        # self.outputs.new('StringsSocket',  "Other Edges")
+        # self.outputs.new('StringsSocket',  "Other Faces")
 
         self.outputs.new('StringsSocket',  "Names")
 
@@ -1065,7 +1126,8 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
     def draw_buttons(self, context, layout):
         layout.prop(self, 'preset', text="")
         layout.prop(self, 'sType')
-        layout.prop(self, 'oType')
+        # layout.prop(self, 'oType')
+        layout.prop(self, 'alta')
         layout.prop(self, 'sizeItem', expand=False)
         layout.prop(self, 'snub', expand=False)
         layout.prop(self, "dual")
@@ -1102,12 +1164,12 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
         # print("start sve loop")
         mainVertList, mainEdgeList, mainPolyList = [[], [], []]
         pairVertList, pairEdgeList, pairPolyList = [[], [], []]
-        origVertList, origEdgeList, origPolyList = [[], [], []]
+        altaVertList, altaEdgeList, altaPolyList = [[], [], []]
         for s, v, e in zip(*parameters):
             # logger.info("next s v e loop")
             # print("next sve loop")
-            flags = [self.sType, self.dual, self.snub, self.sizeItem]
-            mVerts, mEdges, mPolys, pVerts, pEdges, pPolys, oVerts, oEdges, oPolys = make_solid(flags, s, v, e)
+            flags = [self.sType, self.dual, self.snub, self.sizeItem, self.alta]
+            mVerts, mEdges, mPolys, pVerts, pEdges, pPolys, aVerts, aEdges, aPolys = make_solid(flags, s, v, e)
 
             mainVertList.append(mVerts)
             mainEdgeList.append(mEdges)
@@ -1117,9 +1179,9 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
             pairEdgeList.append(pEdges)
             pairPolyList.append(pPolys)
 
-            origVertList.append(oVerts)
-            origEdgeList.append(oEdges)
-            origPolyList.append(oPolys)
+            altaVertList.append(aVerts)
+            altaEdgeList.append(aEdges)
+            altaPolyList.append(aPolys)
         # logger.info("done s v e loop")
 
         self.outputs['Main Verts'].sv_set(mainVertList)
@@ -1130,79 +1192,79 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
         self.outputs['Pair Edges'].sv_set(pairEdgeList)
         self.outputs['Pair Polys'].sv_set(pairPolyList)
 
-        self.outputs['Original Verts'].sv_set(origVertList)
-        self.outputs['Original Edges'].sv_set(origEdgeList)
-        self.outputs['Original Polys'].sv_set(origPolyList)
+        self.outputs['Alta Verts'].sv_set(altaVertList)
+        self.outputs['Alta Edges'].sv_set(altaEdgeList)
+        self.outputs['Alta Polys'].sv_set(altaPolyList)
 
         # ov = solids_data[self.sType]["VT"]["MAIN"]["VERTS"]
         # of1 = solids_data[self.sType]["VT"]["VF"]
         # of2 = solids_data[self.sType]["VT"]["FF"]
 
-        truncation = "NT"
-        truncation = "VT"
-        truncation = "ET"
-        which = "VF"
-        which = "EF"
-        which = "FF"
+        # truncation = "NT"
+        # truncation = "VT"
+        # truncation = "ET"
+        # which = "VF"
+        # which = "EF"
+        # which = "FF"
 
-        truncation = self.truncationType
-        which = (self.outRadii + "F")[1:]
-        # print("o truncation=", truncation)
-        # print("o which=", which)
+        # truncation = self.truncationType
+        # which = (self.outRadii + "F")[1:]
+        # # print("o truncation=", truncation)
+        # # print("o which=", which)
 
-        vt = input_V[0]
-        # print("vTrunc=", vt)
-        plato = self.sType if vt <= 0.5 else dualPairs[self.sType]
+        # vt = input_V[0]
+        # # print("vTrunc=", vt)
+        # plato = self.sType if vt <= 0.5 else dualPairs[self.sType]
 
-        ov = solids_data[plato][truncation]["MAIN"]["VERTS"]
-        oe = solids_data[plato][truncation][which]
-        of = solids_data[plato][truncation][which]
+        # ov = solids_data[plato][truncation]["MAIN"]["VERTS"]
+        # oe = solids_data[plato][truncation][which]
+        # of = solids_data[plato][truncation][which]
 
-        self.outputs['Other Verts'].sv_set([ov])
-        self.outputs['Other Edges'].sv_set([oe])
-        self.outputs['Other Faces'].sv_set([of])
+        # self.outputs['Other Verts'].sv_set([ov])
+        # self.outputs['Other Edges'].sv_set([oe])
+        # self.outputs['Other Faces'].sv_set([of])
 
         return
 
-        make_platonic_solid(self.sType)
+        # make_platonic_solid(self.sType)
 
-        if self.outputs['Other Verts'].is_linked:
+        # if self.outputs['Other Verts'].is_linked:
 
-            if self.vTrunc == 0:
-                plato = self.sType
-                truncation = "NT"
+        #     if self.vTrunc == 0:
+        #         plato = self.sType
+        #         truncation = "NT"
 
-            elif self.vTrunc == 1:
-                plato = dualPairs[self.sType]
-                truncation = "NT"
+        #     elif self.vTrunc == 1:
+        #         plato = dualPairs[self.sType]
+        #         truncation = "NT"
 
-            elif self.vTrunc <= 0.5:  # simple truncation of the solid
-                plato = self.sType
-                if self.eTrunc == 0:  # no edge truncation -> just vertex truncation
-                    truncation = "VT"
-                else:  # vertex & edge truncation
-                    truncation = "ET"
+        #     elif self.vTrunc <= 0.5:  # simple truncation of the solid
+        #         plato = self.sType
+        #         if self.eTrunc == 0:  # no edge truncation -> just vertex truncation
+        #             truncation = "VT"
+        #         else:  # vertex & edge truncation
+        #             truncation = "ET"
 
-            else:  # vTrunc > 0.5 -> simple (mirrored) truncation of the dual
-                plato = dualPairs[self.sType]
-                if self.eTrunc == 0:  # no edge truncation -> just vertex truncation
-                    truncation = "VT"
-                else:  # vertex & edge truncation
-                    truncation = "ET"
+        #     else:  # vTrunc > 0.5 -> simple (mirrored) truncation of the dual
+        #         plato = dualPairs[self.sType]
+        #         if self.eTrunc == 0:  # no edge truncation -> just vertex truncation
+        #             truncation = "VT"
+        #         else:  # vertex & edge truncation
+        #             truncation = "ET"
 
-            if self.oType in ["FACE NORMALS", "FACE CENTERS", "EDGE CENTERS"]:
-                # print("plato = ", plato)
-                # print("sType = ", self.sType)
-                # print("self.vTrunc = ", self.vTrunc)
-                # print("self.eTrunc = ", self.eTrunc)
-                # print("truncation = ", truncation)
-                # print("oType = ", self.oType)
-                pair = "DUAL" if self.dual else "MAIN"
-                otherVerts = list(solids_data[plato][truncation][pair][self.oType].values())
-            else:  # DUAL VERTS
-                otherVerts = solids_data[plato][truncation][pair][self.oType]
+        #     if self.oType in ["FACE NORMALS", "FACE CENTERS", "EDGE CENTERS"]:
+        #         # print("plato = ", plato)
+        #         # print("sType = ", self.sType)
+        #         # print("self.vTrunc = ", self.vTrunc)
+        #         # print("self.eTrunc = ", self.eTrunc)
+        #         # print("truncation = ", truncation)
+        #         # print("oType = ", self.oType)
+        #         pair = "DUAL" if self.dual else "MAIN"
+        #         otherVerts = list(solids_data[plato][truncation][pair][self.oType].values())
+        #     else:  # DUAL VERTS
+        #         otherVerts = solids_data[plato][truncation][pair][self.oType]
 
-            self.outputs['Other Verts'].sv_set([otherVerts])
+        #     self.outputs['Other Verts'].sv_set([otherVerts])
 
         if self.preset != " ":
             if self.dual:
@@ -1244,17 +1306,5 @@ TODO:
 - add NT, VT, ET vep output based on user selection
 - cleanup the code
 - factorize debug info into debug print function : DONE
-
-
-faces:
-
-    NT FF
-
-    VT VF
-    VT FF
-
-    ET VF
-    ET EF
-    ET FF
 
 '''
