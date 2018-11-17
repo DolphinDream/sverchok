@@ -264,8 +264,8 @@ def get_radius(plato, truncation, rID, vt, et):
             Rv = 1 / 2 * sqrt(3 + 3 * PHI - 2 * vt + vt * vt)
         elif truncation == "ET":
             Rf = 1
-            Re = 1
-            Rv = 1
+            Re = 1 / 2 * sqrt(3 + 3 * PHI - 2 * vt + vt * vt * (1 - et * PHI * PHI / 2 + et * et * PHI * PHI * 3 / 16))
+            Rv = 1 / 2 * sqrt(3 + 3 * PHI - 2 * vt + vt * vt * (1 - et * PHI * PHI / 2 + et * et * PHI * PHI * 4 / 16))
 
     elif plato == "ICOSAHEDRON":
         if truncation == "NT":
@@ -560,6 +560,10 @@ def make_platonic_solid(plato):
     solids_data[plato]["NT"]["MAIN"]["EDGES"] = edges
     solids_data[plato]["NT"]["MAIN"]["FACES"] = faces
 
+    solids_data[plato]["NT"]["VF"] = []  # vert faces subset of all faces
+    solids_data[plato]["NT"]["EF"] = []  # face faces subset of all faces
+    solids_data[plato]["NT"]["FF"] = []  # face faces subset of all faces
+
     # compute some useful data
     compute_edge_centers(plato, "NT", "MAIN")
     compute_face_centers(plato, "NT", "MAIN")
@@ -578,6 +582,7 @@ def make_vertex_trucated_solid(plato, vTrunc):
     ''' Make Vertex-Truncated solid from the Non-Truncated solid '''
 
     logger.info("make_vertex_trucated_solid for: %s, %.2f" % (plato, vTrunc))
+    # print("make_vertex_trucated_solid for: %s, %.2f" % (plato, vTrunc))
 
     nVerts = solids_data[plato]["NT"]["MAIN"]["VERTS"]
     nEdges = solids_data[plato]["NT"]["MAIN"]["EDGES"]
@@ -588,6 +593,10 @@ def make_vertex_trucated_solid(plato, vTrunc):
     solids_data[plato]["VT"]["EV MAP"] = {}  # book-keeping map (edge to truncated edge)
     solids_data[plato]["VT"]["E EDGE"] = {}  # book-keeping map
     solids_data[plato]["VT"]["F FACE"] = {}  # book-keeping map
+
+    solids_data[plato]["VT"]["VF"] = []  # vert faces subset of all faces
+    solids_data[plato]["VT"]["EF"] = []  # face faces subset of all faces
+    solids_data[plato]["VT"]["FF"] = []  # face faces subset of all faces
 
     # generate the truncated VERTS (and edges/faces at the each vertex)
     newVerts, newEdges, newFaces = [[], [], []]
@@ -614,8 +623,14 @@ def make_vertex_trucated_solid(plato, vTrunc):
         # print("face= ", face)
         solids_data[plato]["VT"]["V FACE"][i] = newFace  # book-keeping (vertex -> vertex face)
         newFaces.append(newFace)
+        # logger.warning("Adding faces for VT VF")
+        # print("Adding faces for VT VF for vertex #", i)
+        solids_data[plato]["VT"]["VF"] = [face for face in newFaces]
+        # generate edges in the vert faces
         ne = [[newFace[n - 1], newFace[n]] for n in range(len(newFace))]
         newEdges.extend(ne)
+
+    # pprint(solids_data[plato]["VT"]["VF"])
 
     # append the truncated EDGES generated from the original edges (these connect vertex faces)
     if f != 0.5:  # if f = 0.5 there is no truncated edge
@@ -642,6 +657,7 @@ def make_vertex_trucated_solid(plato, vTrunc):
             # book-keeping (face -> truncated face)
             solids_data[plato]["VT"]["F FACE"][n] = newFace
         newFaces.append(newFace)
+        solids_data[plato]["VT"]["FF"].append(newFace)
 
     # sort the indices of the new edges (needed for lookup)
     newEdges = [sorted(e) for e in newEdges]
@@ -686,6 +702,10 @@ def make_edge_trucated_solid(plato, eTrunc, snub):
     solids_data[plato]["ET"] = {}  # EDGE-TRUNCATED mesh data
     solids_data[plato]["ET"]["EE MAP"] = {}  # book-keeping
     solids_data[plato]["ET"]["VV MAP"] = {}  # book-keeping
+
+    solids_data[plato]["ET"]["VF"] = []  # vert faces subset of all faces
+    solids_data[plato]["ET"]["EF"] = []  # edge faces subset of all faces
+    solids_data[plato]["ET"]["FF"] = []  # face faces subset of all faces
 
     f = eTrunc / 2
     newVerts, newEdges, newFaces = [[], [], []]
@@ -751,6 +771,21 @@ def make_edge_trucated_solid(plato, eTrunc, snub):
                 if f != 0.5 and not lSnub and not rSnub:
                     newFace.append(vjiID)
         newFaces.append(newFace)
+        if face in solids_data[plato]["VT"]["VF"]:
+            # print("adding to ET VF faces")
+            # print("newFace=", face)
+            # print("VT VF faces = ", solids_data[plato]["VT"]["VF"])
+            solids_data[plato]["ET"]["VF"].append(newFace)
+        elif face in solids_data[plato]["VT"]["FF"]:
+            # print("adding to ET FF faces")
+            # print("newFace=", face)
+            # print("VT VF faces = ", solids_data[plato]["VT"]["VF"])
+            solids_data[plato]["ET"]["FF"].append(newFace)
+        # else:
+        #     print("new ET Face.. where to go?")
+        #     print("newFace=", face)
+        #     print("VT VF faces = ", solids_data[plato]["VT"]["VF"])
+        #     print("VT FF faces = ", solids_data[plato]["VT"]["FF"])
 
     # generate (edge) FACES & EDGES
     for e in nEdges:
@@ -776,20 +811,25 @@ def make_edge_trucated_solid(plato, eTrunc, snub):
         if lSnub:
             newFace = [v1, v2, v3]
             newFaces.append(newFace)
+            solids_data[plato]["ET"]["EF"].append(newFace)
             newFace = [v1, v3, v4]
             newFaces.append(newFace)
+            solids_data[plato]["ET"]["EF"].append(newFace)
             newEdges.extend([[v1, v2], [v2, v3], [v3, v1]])
             newEdges.extend([[v1, v3], [v3, v4], [v4, v1]])
         elif rSnub:
             newFace = [v1, v2, v4]
             newFaces.append(newFace)
+            solids_data[plato]["ET"]["EF"].append(newFace)
             newFace = [v4, v2, v3]
             newFaces.append(newFace)
+            solids_data[plato]["ET"]["EF"].append(newFace)
             newEdges.extend([[v1, v2], [v2, v4], [v4, v1]])
             newEdges.extend([[v4, v2], [v2, v3], [v3, v4]])
         else:  # no snub
             newFace = [v1, v2, v3, v4]
             newFaces.append(newFace)
+            solids_data[plato]["ET"]["EF"].append(newFace)
             ne = [[newFace[n - 1], newFace[n]] for n in range(len(newFace))]
             newEdges.extend(ne)
 
@@ -834,6 +874,8 @@ def make_solid(flags, size, vTrunc, eTrunc):
         make_vertex_trucated_solid(plato, 1 - vTrunc)
         make_edge_trucated_solid(plato, eTrunc, mirrorSnub[snub])
 
+    # pprint(solids_data)
+
     truncation = "NT" if vTrunc in [0, 1] else "VT" if eTrunc == 0 else "ET"
 
     vn = solids_data[sType]["NT"]["MAIN"]["VERTS"]
@@ -863,13 +905,30 @@ def make_solid(flags, size, vTrunc, eTrunc):
     if sizeItem != "NTEL":
         truncation = sizeItem[0:2]  # NT, VT or ET
         radius = sizeItem[2:4]  # RF, RE or RV
-        print("truncation = ", truncation)
-        print("radius = ", radius)
-        r1 = get_radius(sType, "NT", "RV", vTrunc, eTrunc)
-        r2 = get_radius(sType, truncation, radius, vTrunc, eTrunc)
+        # print("truncation = ", truncation)
+        # print("radius = ", radius)
+        # r1 = get_radius(sType, "NT", "RV", vTrunc, eTrunc)
+        if vTrunc > 0.5:
+            if truncation == "NT":
+                r2 = get_radius(sType, "NT", radius, vTrunc, eTrunc)
+                size = size / r2
+                size1 = size1 / r2
+            else:  # VT or ET
+                if radius == "RV":
+                    r2 = get_radius(dualPairs[sType], truncation, "RV", 1 - vTrunc, eTrunc)
+                elif radius == "RF":
+                    r2 = get_radius(dualPairs[sType], "NT", "RF", 1 - vTrunc, eTrunc)
+                else:  # RE
+                    r2 = get_radius(dualPairs[sType], truncation, "RE", 1 - vTrunc, eTrunc)
+                size = size1 / r2
+                size1 = size1 / r2
+        else:
+            r2 = get_radius(sType, truncation, radius, vTrunc, eTrunc)
+            size = size1 / r2
+            size1 = size1 / r2
 
-        size = size / r2
-        size1 = size1 / r2
+        # size = size1 / r2
+        # size1 = size1 / r2
 
     vn = [tuple(Vector(v) * size1) for v in vn]
     v1 = [tuple(Vector(v) * size) for v in v1]
@@ -996,6 +1055,8 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
         self.outputs.new('StringsSocket',  "Original Polys")
 
         self.outputs.new('VerticesSocket',  "Other Verts")
+        self.outputs.new('StringsSocket',  "Other Edges")
+        self.outputs.new('StringsSocket',  "Other Faces")
 
         self.outputs.new('StringsSocket',  "Names")
 
@@ -1035,25 +1096,31 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
 
         parameters = match_long_repeat([input_S, input_V, input_E])
 
+        # print(parameters)
+
+        # logger.info("start s v e loop")
+        # print("start sve loop")
         mainVertList, mainEdgeList, mainPolyList = [[], [], []]
         pairVertList, pairEdgeList, pairPolyList = [[], [], []]
         origVertList, origEdgeList, origPolyList = [[], [], []]
         for s, v, e in zip(*parameters):
+            # logger.info("next s v e loop")
+            # print("next sve loop")
             flags = [self.sType, self.dual, self.snub, self.sizeItem]
-            data = make_solid(flags, s, v, e)
-            mainVerts, mainEdges, mainPolys, pairVerts, pairEdges, pairPolys, origVerts, origEdges, origPolys = data
+            mVerts, mEdges, mPolys, pVerts, pEdges, pPolys, oVerts, oEdges, oPolys = make_solid(flags, s, v, e)
 
-            mainVertList.append(mainVerts)
-            mainEdgeList.append(mainEdges)
-            mainPolyList.append(mainPolys)
+            mainVertList.append(mVerts)
+            mainEdgeList.append(mEdges)
+            mainPolyList.append(mPolys)
 
-            pairVertList.append(pairVerts)
-            pairEdgeList.append(pairEdges)
-            pairPolyList.append(pairPolys)
+            pairVertList.append(pVerts)
+            pairEdgeList.append(pEdges)
+            pairPolyList.append(pPolys)
 
-            origVertList.append(origVerts)
-            origEdgeList.append(origEdges)
-            origPolyList.append(origPolys)
+            origVertList.append(oVerts)
+            origEdgeList.append(oEdges)
+            origPolyList.append(oPolys)
+        # logger.info("done s v e loop")
 
         self.outputs['Main Verts'].sv_set(mainVertList)
         self.outputs['Main Edges'].sv_set(mainEdgeList)
@@ -1066,6 +1133,36 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
         self.outputs['Original Verts'].sv_set(origVertList)
         self.outputs['Original Edges'].sv_set(origEdgeList)
         self.outputs['Original Polys'].sv_set(origPolyList)
+
+        # ov = solids_data[self.sType]["VT"]["MAIN"]["VERTS"]
+        # of1 = solids_data[self.sType]["VT"]["VF"]
+        # of2 = solids_data[self.sType]["VT"]["FF"]
+
+        truncation = "NT"
+        truncation = "VT"
+        truncation = "ET"
+        which = "VF"
+        which = "EF"
+        which = "FF"
+
+        truncation = self.truncationType
+        which = (self.outRadii + "F")[1:]
+        # print("o truncation=", truncation)
+        # print("o which=", which)
+
+        vt = input_V[0]
+        # print("vTrunc=", vt)
+        plato = self.sType if vt <= 0.5 else dualPairs[self.sType]
+
+        ov = solids_data[plato][truncation]["MAIN"]["VERTS"]
+        oe = solids_data[plato][truncation][which]
+        of = solids_data[plato][truncation][which]
+
+        self.outputs['Other Verts'].sv_set([ov])
+        self.outputs['Other Edges'].sv_set([oe])
+        self.outputs['Other Faces'].sv_set([of])
+
+        return
 
         make_platonic_solid(self.sType)
 
@@ -1122,6 +1219,10 @@ class SvSolidsNode(bpy.types.Node, SverchCustomTreeNode):
         radius = radius * size
         self.outputs["Radius"].sv_set([[radius]])
 
+        # pprint(solids_data[self.sType]["VT"]["VF"])
+        # print("and one more time")
+        # pprint(solids_data )
+
 
 def register():
     bpy.utils.register_class(SvSolidsNode)
@@ -1144,5 +1245,16 @@ TODO:
 - cleanup the code
 - factorize debug info into debug print function : DONE
 
+
+faces:
+
+    NT FF
+
+    VT VF
+    VT FF
+
+    ET VF
+    ET EF
+    ET FF
 
 '''
