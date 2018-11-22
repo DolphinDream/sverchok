@@ -83,24 +83,10 @@ class SvSetLineDirection(bpy.types.Operator):
 
 
 class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
-    ''' Line MK4'''
+    ''' Line '''
     bl_idname = 'SvLineNodeMK4'
-    bl_label = 'Line MK4'
+    bl_label = 'Line'
     bl_icon = 'GRIP'
-
-    def upgrade_if_needed(self):
-        """ This allows us to keep the node mk4 - on the fly node upgrade"""
-        if "Size" not in self.inputs:
-            size_socket = self.inputs.new('StringsSocket', "Size")
-            size_socket.prop_name = 'size'
-            size_socket.hide_safe = not self.normalize
-
-    def wrapped_update(self, context):
-        """ need to do UX transformation before updating node"""
-        self.upgrade_if_needed()
-        size_socket = self.inputs["Size"]
-        size_socket.hide_safe = not self.normalize
-        updateNode(self, context)
 
     def update_direction(self, context):
         self.point_V1 = [0, 0, 0]
@@ -127,7 +113,7 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
 
     normalize = BoolProperty(
         name='Normalize', description='Normalize line to size',
-        default=False, update=wrapped_update)
+        default=False, update=updateNode)
 
     size = FloatProperty(
         name='Size', description='Size of line',
@@ -155,15 +141,16 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
     def draw_buttons(self, context, layout):
         col = layout.column(align=False)
 
-        node_tree = self.id_data.name
-        node_name = self.name
-        caller = '|><|'.join([node_tree, node_name])
+        if not (self.inputs["V1"].is_linked and self.inputs["V2"].is_linked):
+            node_tree = self.id_data.name
+            node_name = self.name
+            caller = '|><|'.join([node_tree, node_name])
 
-        row = col.row(align=True)
-        for direction in "XYZ":
-            op = row.operator("sv.set_line_direction", text=direction)
-            op.direction = direction
-            op.caller = caller
+            row = col.row(align=True)
+            for direction in "XYZ":
+                op = row.operator("sv.set_line_direction", text=direction)
+                op.direction = direction
+                op.caller = caller
 
         col = layout.column(align=True)
         row = col.row(align=True)
@@ -182,9 +169,6 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
         input_size = inputs["Size"].sv_get()[0]
         input_V1 = inputs["V1"].sv_get()[0]
         input_V2 = inputs["V2"].sv_get()[0]
-
-        if self.normalize:
-            self.upgrade_if_needed()
 
         params = match_long_repeat([input_num, input_step])
 
