@@ -301,7 +301,7 @@ class SvImageComponentsNode(bpy.types.Node, SverchCustomTreeNode):
 
     def process(self):
         outputs = self.outputs
-        
+
         if not self.loaded:
             return
         if not outputs['xya'].is_linked:
