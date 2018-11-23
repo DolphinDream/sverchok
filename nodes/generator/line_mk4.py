@@ -29,6 +29,23 @@ modeItems = [
 directions = {"X": [1, 0, 0], "Y": [0, 1, 0], "Z": [0, 0, 1]}
 
 
+def get_vector_interpolator(nx, ny, nz, v1, v2):
+    ''' Get the optimal vector interpolator to speed up the line generation '''
+    interpolator = [
+        lambda l: (v1[0], v1[1], v1[2]),                            # 0: n=(0,0,0)
+        lambda l: (v1[0], v1[1], v1[2] + l * nz),                   # 1: n=(0,0,1)
+        lambda l: (v1[0], v1[1] + l * ny, v1[2]),                   # 2: n=(0,1,0)
+        lambda l: (v1[0], v1[1] + l * ny, v1[2] + l * nz),          # 3: n=(0,1,1)
+        lambda l: (v1[0] + l * nx, v1[1], v1[2]),                   # 4: n=(1,0,0)
+        lambda l: (v1[0] + l * nx, v1[1], v1[2] + l * nz),          # 5: n=(1,0,1)
+        lambda l: (v1[0] + l * nx, v1[1] + l * ny, v1[2]),          # 6: n=(1,1,0)
+        lambda l: (v1[0] + l * nx, v1[1] + l * ny, v1[2] + l * nz)  # 7: n=(1,1,1)
+    ]
+
+    index = (nx != 0) << 2 | (ny != 0) << 1 | (nz != 0)
+    return interpolator[index]
+
+
 def make_line(flags, steps, size, v1, v2):
     center, normalize, mode = flags
 
@@ -43,7 +60,7 @@ def make_line(flags, steps, size, v1, v2):
     stepsLength = sum(steps)  # length of the non-normalized steps
 
     if normalize:
-        scale = 1 if nn == 0 else (1 / nn / stepsLength * size) # scale to given size
+        scale = 1 if nn == 0 else (1 / nn / stepsLength * size)  # scale to given size
     else:  # not normalized
         if mode == "AB":
             scale = 1 / stepsLength  # scale to AB vector size
@@ -52,7 +69,7 @@ def make_line(flags, steps, size, v1, v2):
 
     nx, ny, nz = [nx * scale, ny * scale, nz * scale]
 
-    vec = lambda l: (v1[0] + l * nx, v1[1] + l * ny, v1[2] + l * nz)
+    vec = get_vector_interpolator(nx, ny, nz, v1, v2)
 
     verts = []
     add_vert = verts.append
