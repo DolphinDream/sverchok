@@ -20,6 +20,7 @@ import bpy
 from bpy.props import IntProperty, FloatProperty, BoolProperty, EnumProperty, FloatVectorProperty, StringProperty
 from sverchok.node_tree import SverchCustomTreeNode
 from sverchok.data_structure import updateNode, fullList, match_long_repeat
+from sverchok.utils.sv_operator_mixins import SvGenericCallbackWithParams
 from math import sqrt
 
 modeItems = [
@@ -82,28 +83,16 @@ def make_line(flags, steps, size, v1, v2):
     return verts, edges
 
 
-class SvSetLineDirection(bpy.types.Operator):
-    bl_label = "Set line direction"
-    bl_idname = "sv.set_line_direction"
-    bl_description = "Set the direction of the line along X, Y or Z"
-
-    direction = StringProperty(default="X")
-    caller = StringProperty("")
-
-    def execute(self, context):
-        node_tree, node_name = self.caller.split('|><|')
-        node = bpy.data.node_groups[node_tree].nodes[node_name]
-        node.direction = self.direction
-        node.mode = "OD"
-
-        return {'FINISHED'}
-
-
 class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
     ''' Line '''
     bl_idname = 'SvLineNodeMK4'
     bl_label = 'Line'
     bl_icon = 'GRIP'
+
+    def set_direction(self, operator):
+        self.direction = operator.direction
+        self.mode = "OD"
+        return {'FINISHED'}
 
     def update_normalize(self, context):
         self.inputs["Size"].hide_safe = not self.normalize
@@ -161,16 +150,11 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
     def draw_buttons(self, context, layout):
         col = layout.column(align=False)
 
-        if not (self.inputs["V1"].is_linked and self.inputs["V2"].is_linked):
-            node_tree = self.id_data.name
-            node_name = self.name
-            caller = '|><|'.join([node_tree, node_name])
-
+        if not self.inputs["V2"].is_linked:
             row = col.row(align=True)
             for direction in "XYZ":
-                op = row.operator("sv.set_line_direction", text=direction)
+                op = row.operator("node.set_line_direction", text=direction)
                 op.direction = direction
-                op.caller = caller
 
         col = layout.column(align=True)
         row = col.row(align=True)
@@ -217,9 +201,18 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
             self.outputs['Edges'].sv_set(edgeList)
 
 
+class SvSetLineDirection(bpy.types.Operator, SvGenericCallbackWithParams):
+    bl_label = "Set line direction"
+    bl_idname = "node.set_line_direction"   # dont use sv.
+    bl_description = "Set the direction of the line along X, Y or Z"
+
+    direction = StringProperty(default="X")
+    fn_name = StringProperty(default="set_direction")
+
+
 def register():
-    bpy.utils.register_class(SvLineNodeMK4)
     bpy.utils.register_class(SvSetLineDirection)
+    bpy.utils.register_class(SvLineNodeMK4)
 
 
 def unregister():
