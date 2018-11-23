@@ -88,6 +88,9 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
     bl_label = 'Line'
     bl_icon = 'GRIP'
 
+    def update_normalize(self, context):
+        self.inputs["Size"].hide_safe = not self.normalize
+
     def update_direction(self, context):
         self.point_V1 = [0, 0, 0]
         self.point_V2 = directions[self.direction]
@@ -113,7 +116,7 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
 
     normalize = BoolProperty(
         name='Normalize', description='Normalize line to size',
-        default=False, update=updateNode)
+        default=False, update=update_normalize)
 
     size = FloatProperty(
         name='Size', description='Size of line',
@@ -133,8 +136,8 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
         size_socket = self.inputs.new('StringsSocket', "Size")
         size_socket.prop_name = 'size'
         size_socket.hide_safe = True
-        self.inputs.new('VerticesSocket', "V1", "V1").prop_name = "point_V1"
-        self.inputs.new('VerticesSocket', "V2", "V2").prop_name = "point_V2"
+        self.inputs.new('VerticesSocket', "V1").prop_name = "point_V1"
+        self.inputs.new('VerticesSocket', "V2").prop_name = "point_V2"
         self.outputs.new('VerticesSocket', "Verts", "Verts")
         self.outputs.new('StringsSocket', "Edges", "Edges")
 
