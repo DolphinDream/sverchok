@@ -43,29 +43,27 @@ def get_vector_interpolator(nx, ny, nz, v1, v2):
         lambda l: (v1[0] + l * nx, v1[1] + l * ny, v1[2] + l * nz)  # 7: n=(1,1,1)
     ]
 
-    index = (nx != 0) << 2 | (ny != 0) << 1 | (nz != 0)
-    return interpolator[index]
+    return interpolator[(nx != 0) << 2 | (ny != 0) << 1 | (nz != 0)]
 
 
-def make_line(flags, steps, size, v1, v2):
-    center, normalize, mode = flags
+def make_line(steps, size, v1, v2, center, normalize, mode):
 
     # get the scaled direction (based on mode, size & normalize)
     if mode == "AB":
         nx, ny, nz = [v2[0] - v1[0],  v2[1] - v1[1], v2[2] - v1[2]]
-    elif mode == "OD":
+    else: # mode == "OD":
         nx, ny, nz = v2
-
-    nn = sqrt(nx * nx + ny * ny + nz * nz)
 
     stepsLength = sum(steps)  # length of the non-normalized steps
 
     if normalize:
+        nn = sqrt(nx * nx + ny * ny + nz * nz)
         scale = 1 if nn == 0 else (1 / nn / stepsLength * size)  # scale to given size
     else:  # not normalized
         if mode == "AB":
             scale = 1 / stepsLength  # scale to AB vector size
-        elif mode == "OD":
+        else: # mode == "OD":
+            nn = sqrt(nx * nx + ny * ny + nz * nz)
             scale = 1 if nn == 0 else (1 / nn)  # scale to steps size
 
     nx, ny, nz = [nx * scale, ny * scale, nz * scale]
@@ -96,6 +94,7 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
 
     def update_normalize(self, context):
         self.inputs["Size"].hide_safe = not self.normalize
+        updateNode(self, context)
 
     def update_direction(self, context):
         self.point_V1 = [0, 0, 0]
@@ -175,7 +174,6 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
         input_V2 = inputs["V2"].sv_get()[0]
 
         params = match_long_repeat([input_num, input_step])
-
         stepList = []
         for n, s in zip(*params):
             for num in n:
@@ -184,13 +182,11 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
                 fullList(s, num - 1)  # extend step list if needed
                 stepList.append(s)
 
-        flags = [self.center, self.normalize, self.mode]
-
-        params2 = match_long_repeat([stepList, input_size, input_V1, input_V2])
-
+        c, n, m = [self.center, self.normalize, self.mode]
+        params = match_long_repeat([stepList, input_size, input_V1, input_V2])
         vertList, edgeList = [], []
-        for steps, size, v1, v2 in zip(*params2):
-            verts, edges = make_line(flags, steps, size, v1, v2)
+        for steps, size, v1, v2 in zip(*params):
+            verts, edges = make_line(steps, size, v1, v2, c, n, m)
             vertList.append(verts)
             edgeList.append(edges)
 
