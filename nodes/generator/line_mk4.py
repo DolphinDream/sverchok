@@ -30,28 +30,26 @@ modeItems = [
 directions = {"X": [1, 0, 0], "Y": [0, 1, 0], "Z": [0, 0, 1]}
 
 
-def get_vector_interpolator(nx, ny, nz, v1, v2):
+def get_vector_interpolator(ox, oy, oz, nx, ny, nz):
     ''' Get the optimal vector interpolator to speed up the line generation '''
     interpolator = [
-        lambda l: (v1[0], v1[1], v1[2]),                            # 0: n=(0,0,0)
-        lambda l: (v1[0], v1[1], v1[2] + l * nz),                   # 1: n=(0,0,1)
-        lambda l: (v1[0], v1[1] + l * ny, v1[2]),                   # 2: n=(0,1,0)
-        lambda l: (v1[0], v1[1] + l * ny, v1[2] + l * nz),          # 3: n=(0,1,1)
-        lambda l: (v1[0] + l * nx, v1[1], v1[2]),                   # 4: n=(1,0,0)
-        lambda l: (v1[0] + l * nx, v1[1], v1[2] + l * nz),          # 5: n=(1,0,1)
-        lambda l: (v1[0] + l * nx, v1[1] + l * ny, v1[2]),          # 6: n=(1,1,0)
-        lambda l: (v1[0] + l * nx, v1[1] + l * ny, v1[2] + l * nz)  # 7: n=(1,1,1)
-    ]
+        lambda l: (ox, oy, oz),                             # 0: n=(0,0,0)
+        lambda l: (ox, oy, oz + l * nz),                    # 1: n=(0,0,1)
+        lambda l: (ox, oy + l * ny, oz),                    # 2: n=(0,1,0)
+        lambda l: (ox, oy + l * ny, oz + l * nz),           # 3: n=(0,1,1)
+        lambda l: (ox + l * nx, oy, oz),                    # 4: n=(1,0,0)
+        lambda l: (ox + l * nx, oy, oz + l * nz),           # 5: n=(1,0,1)
+        lambda l: (ox + l * nx, oy + l * ny, oz),           # 6: n=(1,1,0)
+        lambda l: (ox + l * nx, oy + l * ny, oz + l * nz)]  # 7: n=(1,1,1)
 
     return interpolator[(nx != 0) << 2 | (ny != 0) << 1 | (nz != 0)]
 
 
 def make_line(steps, size, v1, v2, center, normalize, mode):
-
     # get the scaled direction (based on mode, size & normalize)
     if mode == "AB":
         nx, ny, nz = [v2[0] - v1[0],  v2[1] - v1[1], v2[2] - v1[2]]
-    else: # mode == "OD":
+    else:  # mode == "OD":
         nx, ny, nz = v2
 
     stepsLength = sum(steps)  # length of the non-normalized steps
@@ -62,13 +60,13 @@ def make_line(steps, size, v1, v2, center, normalize, mode):
     else:  # not normalized
         if mode == "AB":
             scale = 1 / stepsLength  # scale to AB vector size
-        else: # mode == "OD":
+        else:  # mode == "OD":
             nn = sqrt(nx * nx + ny * ny + nz * nz)
             scale = 1 if nn == 0 else (1 / nn)  # scale to steps size
 
     nx, ny, nz = [nx * scale, ny * scale, nz * scale]
 
-    vec = get_vector_interpolator(nx, ny, nz, v1, v2)
+    vec = get_vector_interpolator(v1[0], v1[1], v1[2], nx, ny, nz)
 
     verts = []
     add_vert = verts.append
@@ -82,7 +80,10 @@ def make_line(steps, size, v1, v2, center, normalize, mode):
 
 
 class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
-    ''' Line '''
+    """
+    Triggers: Line, segment.
+    Tooltip: Generate line between two points or from a point in a direction.
+    """
     bl_idname = 'SvLineNodeMK4'
     bl_label = 'Line'
     bl_icon = 'GRIP'
@@ -104,8 +105,7 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
         name="Direction", default="X", update=update_direction)
 
     mode = EnumProperty(
-        name="Mode", items=modeItems,
-        default="OD", update=updateNode)
+        name="Mode", items=modeItems, default="OD", update=updateNode)
 
     num = IntProperty(
         name='Num Verts', description='Number of Vertices',
@@ -124,7 +124,7 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
         default=False, update=update_normalize)
 
     size = FloatProperty(
-        name='Size', description='Size of line',
+        name='Size', description='Size of the normalized line',
         default=10.0, update=updateNode)
 
     point_V1 = FloatVectorProperty(
@@ -174,16 +174,16 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
         input_V2 = inputs["V2"].sv_get()[0]
 
         params = match_long_repeat([input_num, input_step])
-        stepList = []
-        for n, s in zip(*params):
-            for num in n:
-                num = max(2, num)
-                s = s[:(num - 1)]  # shorten step list if needed
-                fullList(s, num - 1)  # extend step list if needed
-                stepList.append(s)
+        stepsList = []
+        for num, steps in zip(*params):
+            for nn in num:
+                nn = max(2, nn)
+                steps = steps[:nn - 1]  # shorten step list if needed
+                fullList(steps, nn - 1)  # extend step list if needed
+                stepsList.append(steps)
 
         c, n, m = [self.center, self.normalize, self.mode]
-        params = match_long_repeat([stepList, input_size, input_V1, input_V2])
+        params = match_long_repeat([stepsList, input_size, input_V1, input_V2])
         vertList, edgeList = [], []
         for steps, size, v1, v2 in zip(*params):
             verts, edges = make_line(steps, size, v1, v2, c, n, m)
