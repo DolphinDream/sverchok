@@ -23,6 +23,10 @@ from sverchok.data_structure import updateNode, fullList, match_long_repeat
 from sverchok.utils.sv_operator_mixins import SvGenericCallbackWithParams
 from math import sqrt
 
+from time import time
+avgTime = 0.0
+totalN = 0
+
 modeItems = [
     ("AB",  "AB",  "Point A to Point B", 0),
     ("OD",  "OD",  "Origin O in direction D", 1)]
@@ -30,7 +34,7 @@ modeItems = [
 directions = {"X": [1, 0, 0], "Y": [0, 1, 0], "Z": [0, 0, 1]}
 
 
-def get_vector_interpolator(ox, oy, oz, nx, ny, nz):
+def get_vector_interpolator1(ox, oy, oz, nx, ny, nz):
     ''' Get the optimal vector interpolator to speed up the line generation '''
     interpolator = [
         lambda l: (ox, oy, oz),                             # 0: n=(0,0,0)
@@ -43,6 +47,134 @@ def get_vector_interpolator(ox, oy, oz, nx, ny, nz):
         lambda l: (ox + l * nx, oy + l * ny, oz + l * nz)]  # 7: n=(1,1,1)
 
     return interpolator[(nx != 0) << 2 | (ny != 0) << 1 | (nz != 0)]
+
+
+def get_vector_interpolator2(ox, oy, oz, nx, ny, nz):
+    ''' Get the optimal vector interpolator to speed up the line generation '''
+    if nx == 0:
+        if ny == 0:
+            if nz == 0:
+                return lambda l: (ox, oy, oz)
+            else:
+                return lambda l: (ox, oy, oz + l * nz)
+        else:  # ny != 0
+            if nz == 0:
+                return lambda l: (ox, oy + l * ny, oz)
+            else:
+                return lambda l: (ox, oy + l * ny, oz + l * nz)
+    else:  # nx != 0
+        if ny == 0:
+            if nz == 0:
+                return lambda l: (ox + l * nx, oy, oz)
+            else:
+                return lambda l: (ox + l * nx, oy, oz + l * nz)
+        else:  # ny != 0
+            if nz == 0:
+                return lambda l: (ox + l * nx, oy + l * ny, oz)
+            else:
+                return lambda l: (ox + l * nx, oy + l * ny, oz + l * nz)
+
+
+def get_vector_interpolator3(ox, oy, oz, nx, ny, nz):
+    ''' Get the optimal vector interpolator to speed up the line generation '''
+    interpolator = [
+        lambda l: (0, 0, 0),
+        lambda l: (0, 0, l * nz),
+        lambda l: (0, l * ny, 0),
+        lambda l: (0, l * ny, l * nz),
+        lambda l: (l * nx, 0, 0),
+        lambda l: (l * nx, 0, l * nz),
+        lambda l: (l * nx, l * ny, 0),
+        lambda l: (l * nx, l * ny, l * nz),
+
+        lambda l: (0, 0, oz),
+        lambda l: (0, 0, oz + l * nz),
+        lambda l: (0, l * ny, oz),
+        lambda l: (0, l * ny, oz + l * nz),
+        lambda l: (l * nx, 0, oz),
+        lambda l: (l * nx, 0, oz + l * nz),
+        lambda l: (l * nx, l * ny, oz),
+        lambda l: (l * nx, l * ny, oz + l * nz),
+
+        lambda l: (0, oy, 0),
+        lambda l: (0, oy, l * nz),
+        lambda l: (0, oy + l * ny, 0),
+        lambda l: (0, oy + l * ny, l * nz),
+        lambda l: (l * nx, oy, 0),
+        lambda l: (l * nx, oy, l * nz),
+        lambda l: (l * nx, oy + l * ny, 0),
+        lambda l: (l * nx, oy + l * ny, l * nz),
+
+        lambda l: (0, oy, oz),
+        lambda l: (0, oy, oz + l * nz),
+        lambda l: (0, oy + l * ny, oz),
+        lambda l: (0, oy + l * ny, oz + l * nz),
+        lambda l: (l * nx, oy, oz),
+        lambda l: (l * nx, oy, oz + l * nz),
+        lambda l: (l * nx, oy + l * ny, oz),
+        lambda l: (l * nx, oy + l * ny, oz + l * nz),
+
+        lambda l: (ox, 0, 0),
+        lambda l: (ox, 0, l * nz),
+        lambda l: (ox, l * ny, 0),
+        lambda l: (ox, l * ny, l * nz),
+        lambda l: (ox + l * nx, 0, 0),
+        lambda l: (ox + l * nx, 0, l * nz),
+        lambda l: (ox + l * nx, l * ny, 0),
+        lambda l: (ox + l * nx, l * ny, l * nz),
+
+        lambda l: (ox, 0, oz),
+        lambda l: (ox, 0, oz + l * nz),
+        lambda l: (ox, l * ny, oz),
+        lambda l: (ox, l * ny, oz + l * nz),
+        lambda l: (ox + l * nx, 0, oz),
+        lambda l: (ox + l * nx, 0, oz + l * nz),
+        lambda l: (ox + l * nx, l * ny, oz),
+        lambda l: (ox + l * nx, l * ny, oz + l * nz),
+
+        lambda l: (ox, oy, 0),
+        lambda l: (ox, oy, l * nz),
+        lambda l: (ox, oy + l * ny, 0),
+        lambda l: (ox, oy + l * ny, l * nz),
+        lambda l: (ox + l * nx, oy, 0),
+        lambda l: (ox + l * nx, oy, l * nz),
+        lambda l: (ox + l * nx, oy + l * ny, 0),
+        lambda l: (ox + l * nx, oy + l * ny, l * nz),
+
+        lambda l: (ox, oy, oz),
+        lambda l: (ox, oy, oz + l * nz),
+        lambda l: (ox, oy + l * ny, oz),
+        lambda l: (ox, oy + l * ny, oz + l * nz),
+        lambda l: (ox + l * nx, oy, oz),
+        lambda l: (ox + l * nx, oy, oz + l * nz),
+        lambda l: (ox + l * nx, oy + l * ny, oz),
+        lambda l: (ox + l * nx, oy + l * ny, oz + l * nz)
+    ]
+
+    index = (ox != 0) << 5 | (oy != 0) << 4 | (oz != 0) << 3 | (nx != 0) << 2 | (ny != 0) << 1 | (nz != 0)
+    return interpolator[index]
+
+
+def get_interpolatorXYZ1(o, n):
+    interpolator = [
+        lambda l: 0,
+        lambda l: o,
+        lambda l: l * n,
+        lambda l: o + l * n]
+    return interpolator[(n != 0) << 1 | (o != 0)]
+
+
+def get_interpolatorXYZ2(o, n):
+    if n == 0:
+        if o == 0:
+            return lambda l: 0
+        else:
+            return lambda l: o
+    else:  # n != 0
+        if o == 0:
+            return lambda l: l * n
+        else:
+            return lambda l: o + l * n
 
 
 def make_line(steps, size, v1, v2, center, normalize, mode):
@@ -66,14 +198,33 @@ def make_line(steps, size, v1, v2, center, normalize, mode):
 
     nx, ny, nz = [nx * scale, ny * scale, nz * scale]
 
-    vec = get_vector_interpolator(v1[0], v1[1], v1[2], nx, ny, nz)
+    # A: VECTOR BASED INTERPOLATORS
+    # case a1 : array of lambdas (nx,ny,nz == 0)
+    # vec = get_vector_interpolator1(v1[0], v1[1], v1[2], nx, ny, nz)
+    # case a2 : if/else lambdas (nx,ny,nz, == 0)
+    vec = get_vector_interpolator2(v1[0], v1[1], v1[2], nx, ny, nz)
+    # case a3 : array of lambdas (ox,oy,oz,nx,ny,nz == 0)
+    # vec = get_vector_interpolator3(v1[0], v1[1], v1[2], nx, ny, nz)
+
+    # B: COMPONENT based interpolators
+    # case b1
+    # x = get_interpolatorXYZ1(v1[0], nx)
+    # y = get_interpolatorXYZ1(v1[1], ny)
+    # z = get_interpolatorXYZ1(v1[2], nz)
+    # case b2
+    # x = get_interpolatorXYZ2(v1[0], nx)
+    # y = get_interpolatorXYZ2(v1[1], ny)
+    # z = get_interpolatorXYZ2(v1[2], nz)
+    # case b3 : lambda of component based interpolators
+    # vec = lambda l: (x(l), y(l), z(l))
 
     verts = []
     add_vert = verts.append
     l = -stepsLength / 2 if center else 0
     for s in [0.0] + steps:
         l = l + s
-        add_vert(vec(l))
+        add_vert(vec(l)) # uncomment for cases a1,a2,a3,b3
+        # add_vert((x(l), y(l), z(l))) # uncomment for cases b1,b2
     edges = [[i, i + 1] for i in range(len(steps))]
 
     return verts, edges
@@ -166,6 +317,8 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
         if not any(s.is_linked for s in self.outputs):
             return
 
+        time1 = time()
+
         inputs = self.inputs
         input_num = inputs["Num"].sv_get()
         input_step = inputs["Step"].sv_get()
@@ -195,6 +348,14 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
 
         if self.outputs['Edges'].is_linked:
             self.outputs['Edges'].sv_set(edgeList)
+
+        time2 = time()
+        global avgTime
+        global totalN
+        avgTime = (avgTime * totalN + (time2 - time1)) / (totalN + 1)
+        totalN = totalN + 1
+        if totalN % 20 == 0:
+            print("process timing: ", avgTime)
 
 
 class SvSetLineDirection(bpy.types.Operator, SvGenericCallbackWithParams):
