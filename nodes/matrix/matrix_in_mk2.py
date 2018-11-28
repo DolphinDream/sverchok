@@ -30,13 +30,13 @@ class SvMatrixGenNodeMK2(bpy.types.Node, SverchCustomTreeNode):
     bl_label = 'Matrix in'
     bl_icon = 'OUTLINER_OB_EMPTY'
 
-    l_ = FloatVectorProperty(name='L', default=(0.0,0.0,0.0), 
+    l_ = FloatVectorProperty(name='L', default=(0.0,0.0,0.0),
             description='Location', precision=3,
             update=updateNode)
-    s_ = FloatVectorProperty(name='S', default=(1.0,1.0,1.0), 
+    s_ = FloatVectorProperty(name='S', default=(1.0,1.0,1.0),
             description='Scale', precision=3,
             update=updateNode)
-    r_ = FloatVectorProperty(name='R', default=(0.0,0.0,1.0), 
+    r_ = FloatVectorProperty(name='R', default=(0.0,0.0,1.0),
             description='Rotation', precision=3,
             update=updateNode)
     a_ = FloatProperty(name='A', description='Angle',
@@ -45,15 +45,27 @@ class SvMatrixGenNodeMK2(bpy.types.Node, SverchCustomTreeNode):
 
     def sv_init(self, context):
         s = self.inputs.new('VerticesSocket', "Location")
+        s.display_nick = "Lo"
+        s.display_name = "Loc"
+        s.display_description = "The location"
         s.prop_name = 'l_'
+
         s = self.inputs.new('VerticesSocket', "Scale")
+        s.display_nick = "Sc"
+        s.display_name = "Sca"
+        s.display_description = "The scale"
         s.prop_name = 's_'
+
         s = self.inputs.new('VerticesSocket', "Rotation")
+        s.display_nick = "Ro"
+        s.display_name = "Rot"
+        s.display_description = "The rotation"
         s.prop_name = 'r_'
+
         s = self.inputs.new('StringsSocket', "Angle")
         s.prop_name = 'a_'
         self.outputs.new('MatrixSocket', "Matrix")
-    
+
     def migrate_from(self, old_node):
         if old_node.bl_idname == 'MatrixGenNode':
             self.l_ = old_node.inputs['Location'].prop
@@ -80,7 +92,7 @@ class SvMatrixGenNodeMK2(bpy.types.Node, SverchCustomTreeNode):
         else:
             angle = A.sv_get()
             rotA = [[]]
-            
+
         max_l = max(len(loc[0]), len(scale[0]), len(rot[0]), len(angle[0]), len(rotA[0]))
         orig = []
         for l in range(max_l):

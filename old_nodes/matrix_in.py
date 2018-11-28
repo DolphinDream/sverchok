@@ -1,4 +1,4 @@
-# ##### BEGIN GPL LICENSE BLOCK #####
+# ##### BEGIN GPL LICENSE BLOCK #####i
 #
 #  This program is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU General Public License
@@ -31,15 +31,18 @@ class MatrixGenNode(bpy.types.Node, SverchCustomTreeNode):
     replacement_nodes = [('SvMatrixGenNodeMK2', None, None)]
 
     def sv_init(self, context):
-        s = self.inputs.new('VerticesSocket', "Location")
+        s = self.inputs.new('VerticesSocket', "Locations")
+        s.display_nick = "Lo"
         s.use_prop = True
         s = self.inputs.new('VerticesSocket', "Scale")
+        s.display_nick = "Sc"
         s.use_prop = True
         s.prop = (1, 1 , 1)
         s = self.inputs.new('VerticesSocket', "Rotation")
+        s.display_nick = "Ro"
         s.use_prop = True
         s.prop = (0, 0, 1)
-        self.inputs.new('StringsSocket', "Angle")
+        self.inputs.new('StringsSocket', "Angles")
         self.outputs.new('MatrixSocket', "Matrix")
 
     def process(self):

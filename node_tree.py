@@ -89,7 +89,11 @@ class SvSocketCommon:
     use_quicklink = BoolProperty(default=True)
     expanded = BoolProperty(default=False)
 
-    quicklink_func_name = StringProperty(default="", name="quicklink_func_name")    
+    quicklink_func_name = StringProperty(default="", name="quicklink_func_name")
+
+    display_name = StringProperty(default="")
+    display_nick = StringProperty(default="")
+    display_description = StringProperty(default="")
 
     @property
     def other(self):
@@ -152,18 +156,31 @@ class SvSocketCommon:
 
                 if self.expanded:
                     c1.prop(self, "expanded", icon='TRIA_UP', text='')
-                    c1.label(text=self.name[0])
+                    if self.display_nick != "":
+                        c1.label(text=self.display_nick)
+                    else:
+                        c1.label(text=self.name[0])
                     c2.prop(prop_origin, prop_name, text="", expand=True)
-                else:
+                else: # not expanded
                     c1.prop(self, "expanded", icon='TRIA_DOWN', text="")
                     row = c2.row(align=True)
                     if self.bl_idname == "SvColorSocket":
-                        row.prop(prop_origin, prop_name)
-                    else:
-                        row.template_component_menu(prop_origin, prop_name, name=self.name)
+                        if self.display_name != "":
+                            row.prop(prop_origin, prop_name, text=self.display_name)
+                        else:
+                            row.prop(prop_origin, prop_name)
+                    else: # not a color socket (every other socket)
+                        if self.display_name != "":
+                            row.template_component_menu(prop_origin, prop_name, name=self.display_name)
+                        else:
+                            row.template_component_menu(prop_origin, prop_name, name=self.name)
 
-            else:
-                layout.template_component_menu(prop_origin, prop_name, name=self.name)
+            else: # socket doesn't use an expander
+                if self.display_name != "":
+                    p = layout.template_component_menu(prop_origin, prop_name, name=self.display_name)
+                    p.name = "X"
+                else:
+                    layout.template_component_menu(prop_origin, prop_name, name=self.name)
 
     def draw_quick_link(self, context, layout, node):
 
@@ -189,7 +206,7 @@ class SvSocketCommon:
         if self.bl_idname == 'StringsSocket':
             if hasattr(self, 'custom_draw') and self.custom_draw:
 
-                # does the node have the draw function referred to by 
+                # does the node have the draw function referred to by
                 # the string stored in socket's custom_draw attribute
                 if hasattr(node, self.custom_draw):
                     getattr(node, self.custom_draw)(self, context, layout)
@@ -204,7 +221,7 @@ class SvSocketCommon:
             t = text
             if not self.is_output:
                 if self.prop_name:
-                    prop = node.rna_type.properties.get(self.prop_name, None) 
+                    prop = node.rna_type.properties.get(self.prop_name, None)
                     t = prop.name if prop else text
             info_text = t + '. ' + SvGetSocketInfo(self)
             info_text += self.extra_info
