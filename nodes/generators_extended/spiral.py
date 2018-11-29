@@ -25,8 +25,10 @@ from math import sin, cos, pi, sqrt, exp, atan, log
 import re
 
 from sverchok.node_tree import SverchCustomTreeNode
-from sverchok.data_structure import updateNode, match_long_repeat
+from sverchok.data_structure import updateNode, match_long_repeat, get_edge_list
 from sverchok.utils.sv_easing_functions import *
+
+from sverchok.utils.profile import profile
 
 PHI = (sqrt(5) + 1) / 2  # the golden ratio
 PHIPI = 2 * log(PHI) / pi  # exponent for the Fibonacci (golden) spiral
@@ -107,7 +109,7 @@ def make_archimedean_spiral(flags, settings):
         z = height * t
         addVert([x, y, z])
 
-    edges = [[i, i + 1] for i in range(len(verts) - 1)]
+    edges = get_edge_list(N)
 
     return verts, edges, norms
 
@@ -150,7 +152,7 @@ def make_logarithmic_spiral(flags, settings):
         z = height * t
         addVert([x, y, z])
 
-    edges = [[i, i + 1] for i in range(len(verts) - 1)]
+    edges = get_edge_list(N)
 
     return verts, edges, norms
 
@@ -199,7 +201,7 @@ def make_spherical_spiral(flags, settings):
         z = eR * sin(theta)
         addVert([x, y, z])
 
-    edges = [[i, i + 1] for i in range(len(verts) - 1)]
+    edges = get_edge_list(N)
 
     return verts, edges, norms
 
@@ -230,7 +232,7 @@ def make_ovoidal_spiral(flags, settings):
     # eR = [iR - (H/2)^2/iR]/2 ::: H = 2 * sqrt(2*iR*eR - iR*iR)
     eR = 0.5 * (iR + 0.25 * height * height / iR)
     eR2 = eR * eR  # cached for performance
-    dR = eR - iR # cached for performance
+    dR = eR - iR  # cached for performance
 
     N = N * turns  # total number of points in the spiral
 
@@ -252,7 +254,7 @@ def make_ovoidal_spiral(flags, settings):
         z = h * scale
         addVert([x, y, z])
 
-    edges = [[i, i + 1] for i in range(len(verts) - 1)]
+    edges = get_edge_list(N)
 
     return verts, edges, norms
 
@@ -326,11 +328,11 @@ def make_cornu_spiral(flags, settings):
         pz = height * t
 
         addVert1([px, py, pz])  # positive spiral verts
-        addVert2([-px, -py, -pz])  # netative spiral verts
+        addVert2([-px, -py, -pz])  # negative spiral verts
 
     verts = verts2[::-1] + verts1
 
-    edges = [[i, i + 1] for i in range(len(verts) - 1)]
+    edges = get_edge_list(2 * N)
 
     return verts, edges, norms
 
@@ -377,7 +379,7 @@ def make_exo_spiral(flags, settings):
         z = height * t
         addVert([x, y, z])
 
-    edges = [[i, i + 1] for i in range(len(verts) - 1)]
+    edges = get_edge_list(N)
 
     return verts, edges, norms
 
@@ -426,7 +428,7 @@ def make_spirangle_spiral(flags, settings):
         phi = phi + deltaA
         addVert([x, y, z])
 
-    edges = [[i, i + 1] for i in range(len(verts) - 1)]
+    edges = get_edge_list(N)
 
     return verts, edges, norms
 
@@ -587,6 +589,7 @@ class SvSpiralNode(bpy.types.Node, SverchCustomTreeNode):
     #     box.prop(self, 'normalize_normals')
     #     box.prop(self, 'normalize_tangents')
 
+    @profile
     def process(self):
         outputs = self.outputs
         # return if no outputs are connected

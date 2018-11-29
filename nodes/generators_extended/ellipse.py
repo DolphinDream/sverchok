@@ -20,10 +20,12 @@ import bpy
 from bpy.props import BoolProperty, IntProperty, FloatProperty, EnumProperty
 
 from sverchok.node_tree import SverchCustomTreeNode
-from sverchok.data_structure import (match_long_repeat, updateNode)
+from sverchok.data_structure import (match_long_repeat, updateNode, get_edge_loop)
 from sverchok.ui.sv_icons import custom_icon
 
 from math import sin, cos, pi, sqrt
+
+from sverchok.utils.profile import profile
 
 centeringItems = [("F1", "F1", ""), ("C", "C", ""), ("F2", "F2", "")]
 modeItems = [("AB", "a b", ""), ("AE", "a e", ""), ("AC", "a c", "")]
@@ -162,6 +164,7 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
             socket2 = self.inputs[1]
             socket2.replace_socket("StringsSocket", "Focal Length").prop_name = "focal_length"
 
+    @profile
     def make_ellipse(self, a, b, N, phase, rotation, scale):
         verts = []
         edges = []
@@ -210,7 +213,8 @@ class SvEllipseNode(bpy.types.Node, SverchCustomTreeNode):
             yy = x * sins + y * coss
             verts.append((xx, yy, 0))
 
-        edges = list((i, (i + 1) % N) for i in range(N + 1))
+        # edges = list((i, (i + 1) % N) for i in range(N + 1))
+        edges = get_edge_loop(N)
         polys = [list(range(N))]
 
         return verts, edges, polys, f1, f2
