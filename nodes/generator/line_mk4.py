@@ -19,13 +19,9 @@
 import bpy
 from bpy.props import IntProperty, FloatProperty, BoolProperty, EnumProperty, FloatVectorProperty, StringProperty
 from sverchok.node_tree import SverchCustomTreeNode
-from sverchok.data_structure import updateNode, fullList, match_long_repeat
+from sverchok.data_structure import updateNode, fullList, match_long_repeat, update_edge_cache, get_edge_list
 from sverchok.utils.sv_operator_mixins import SvGenericCallbackWithParams
 from math import sqrt
-
-from time import time
-avgTime = 0.0
-totalN = 0
 
 modeItems = [
     ("AB",  "AB",  "Point A to Point B", 0),
@@ -199,19 +195,44 @@ def make_line(steps, size, v1, v2, center, normalize, mode):
     nx, ny, nz = [nx * scale, ny * scale, nz * scale]
 
     # A: VECTOR BASED INTERPOLATORS
+    # case a0 : one lambda for all
+    # vec = lambda l: (v1[0] + l * nx, v1[1] + l * ny, v1[2] + l * nz)
     # case a1 : array of lambdas (nx,ny,nz == 0)
     # vec = get_vector_interpolator1(v1[0], v1[1], v1[2], nx, ny, nz)
     # case a2 : if/else lambdas (nx,ny,nz, == 0)
     vec = get_vector_interpolator2(v1[0], v1[1], v1[2], nx, ny, nz)
     # case a3 : array of lambdas (ox,oy,oz,nx,ny,nz == 0)
     # vec = get_vector_interpolator3(v1[0], v1[1], v1[2], nx, ny, nz)
+    # case a4 : if/else right here
+    # if nx == 0:
+    #     if ny == 0:
+    #         if nz == 0:
+    #             vec =  lambda l: (v1[0], v1[1], v1[2])
+    #         else:
+    #             vec =  lambda l: (v1[0], v1[1], v1[2] + l * nz)
+    #     else:  # ny != 0
+    #         if nz == 0:
+    #             vec =  lambda l: (v1[0], v1[1] + l * ny, v1[2])
+    #         else:
+    #             vec =  lambda l: (v1[0], v1[1] + l * ny, v1[2] + l * nz)
+    # else:  # nx != 0
+    #     if ny == 0:
+    #         if nz == 0:
+    #             vec =  lambda l: (v1[0] + l * nx, v1[1], v1[2])
+    #         else:
+    #             vec =  lambda l: (v1[0] + l * nx, v1[1], v1[2] + l * nz)
+    #     else:  # ny != 0
+    #         if nz == 0:
+    #             vec =  lambda l: (v1[0] + l * nx, v1[1] + l * ny, v1[2])
+    #         else:
+    #             vec =  lambda l: (v1[0] + l * nx, v1[1] + l * ny, v1[2] + l * nz)
 
     # B: COMPONENT based interpolators
-    # case b1
+    # case b1 : array
     # x = get_interpolatorXYZ1(v1[0], nx)
     # y = get_interpolatorXYZ1(v1[1], ny)
     # z = get_interpolatorXYZ1(v1[2], nz)
-    # case b2
+    # case b2 : if/else
     # x = get_interpolatorXYZ2(v1[0], nx)
     # y = get_interpolatorXYZ2(v1[1], ny)
     # z = get_interpolatorXYZ2(v1[2], nz)
@@ -225,7 +246,7 @@ def make_line(steps, size, v1, v2, center, normalize, mode):
         l = l + s
         add_vert(vec(l)) # uncomment for cases a1,a2,a3,b3
         # add_vert((x(l), y(l), z(l))) # uncomment for cases b1,b2
-    edges = [[i, i + 1] for i in range(len(steps))]
+    edges = get_edge_list(len(steps))
 
     return verts, edges
 
@@ -317,8 +338,6 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
         if not any(s.is_linked for s in self.outputs):
             return
 
-        time1 = time()
-
         inputs = self.inputs
         input_num = inputs["Num"].sv_get()
         input_step = inputs["Step"].sv_get()
@@ -326,14 +345,18 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
         input_V1 = inputs["V1"].sv_get()[0]
         input_V2 = inputs["V2"].sv_get()[0]
 
+        maxNum = 0
         params = match_long_repeat([input_num, input_step])
         stepsList = []
         for num, steps in zip(*params):
             for nn in num:
                 nn = max(2, nn)
+                maxNum = max(nn, maxNum)
                 steps = steps[:nn - 1]  # shorten step list if needed
                 fullList(steps, nn - 1)  # extend step list if needed
                 stepsList.append(steps)
+
+        update_edge_cache(maxNum) # help the edge generator get faster
 
         c, n, m = [self.center, self.normalize, self.mode]
         params = match_long_repeat([stepsList, input_size, input_V1, input_V2])
@@ -348,14 +371,6 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
 
         if self.outputs['Edges'].is_linked:
             self.outputs['Edges'].sv_set(edgeList)
-
-        time2 = time()
-        global avgTime
-        global totalN
-        avgTime = (avgTime * totalN + (time2 - time1)) / (totalN + 1)
-        totalN = totalN + 1
-        if totalN % 20 == 0:
-            print("process timing: ", avgTime)
 
 
 class SvSetLineDirection(bpy.types.Operator, SvGenericCallbackWithParams):
