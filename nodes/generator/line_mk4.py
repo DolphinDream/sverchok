@@ -23,6 +23,8 @@ from sverchok.data_structure import updateNode, fullList, match_long_repeat, upd
 from sverchok.utils.sv_operator_mixins import SvGenericCallbackWithParams
 from math import sqrt
 
+from sverchok.utils.profile import profile
+
 modeItems = [
     ("AB",  "AB",  "Point A to Point B", 0),
     ("OD",  "OD",  "Origin O in direction D", 1)]
@@ -67,7 +69,7 @@ def get_interpolatorXYZ(o, n):
         else:
             return lambda l: o + l * n
 
-
+# @profile
 def make_line(steps, size, v1, v2, center, normalize, mode):
     # get the scaled direction (based on mode, size & normalize)
     if mode == "AB":
@@ -147,7 +149,7 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
     Tooltip: Generate line between two points or from a point in a direction.
     """
     bl_idname = 'SvLineNodeMK4'
-    bl_label = 'Line'
+    bl_label = 'Line MK4'
     bl_icon = 'GRIP'
 
     def set_direction(self, operator):
@@ -224,6 +226,7 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
         row.prop(self, "center", toggle=True)
         row.prop(self, "normalize", toggle=True)
 
+    @profile
     def process(self):
         if not any(s.is_linked for s in self.outputs):
             return

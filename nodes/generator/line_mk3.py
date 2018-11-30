@@ -22,6 +22,8 @@ from sverchok.node_tree import SverchCustomTreeNode
 from sverchok.data_structure import updateNode, fullList, match_long_repeat
 from sverchok.utils.modules.geom_utils import interp_v3_v3v3, normalize, add_v3_v3v3, sub_v3_v3v3
 
+from sverchok.utils.profile import profile
+
 directionItems = [
     ("X",  "X",  "Along X axis",         0),
     ("Y",  "Y",  "Along Y axis",         1),
@@ -30,7 +32,7 @@ directionItems = [
     ("OD", "OD", "Origin and Direction", 4),
     ]
 
-    
+
 def make_line(steps, center, direction, vert_a, vert_b):
     if direction == "X":
         vec = lambda l: (l, 0.0, 0.0)
@@ -192,11 +194,12 @@ class SvLineNodeMK3(bpy.types.Node, SverchCustomTreeNode):
 
     def process_vectors(self, pts_list, d, va, vb):
         if d == "AB" and self.normalize:
-            vb = add_v3_v3v3(normalize(sub_v3_v3v3(vb, va)), va) 
+            vb = add_v3_v3v3(normalize(sub_v3_v3v3(vb, va)), va)
         elif d == "OD":
             vb = add_v3_v3v3(normalize(vb), va)
         pts_list.append((va, vb))
 
+    @profile
     def process(self):
         if not any(s.is_linked for s in self.outputs):
             return
