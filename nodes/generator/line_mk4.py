@@ -23,15 +23,14 @@ from sverchok.data_structure import updateNode, fullList, match_long_repeat, upd
 from sverchok.utils.sv_operator_mixins import SvGenericCallbackWithParams
 from math import sqrt
 
-from sverchok.utils.profile import profile
-
 modeItems = [
     ("AB",  "AB",  "Point A to Point B", 0),
     ("OD",  "OD",  "Origin O in direction D", 1)]
 
 directions = {"X": [1, 0, 0], "Y": [0, 1, 0], "Z": [0, 0, 1]}
 
-socket_names = { "A" : "Point A", "B": "Point B", "O" : "Origin" , "D": "Distance" }
+socket_names = {"A": "Point A", "B": "Point B", "O": "Origin", "D": "Distance"}
+
 
 def get_vector_interpolator(ox, oy, oz, nx, ny, nz):
     ''' Get the optimal vector interpolator to speed up the line generation '''
@@ -59,21 +58,6 @@ def get_vector_interpolator(ox, oy, oz, nx, ny, nz):
                 return lambda l: (ox + l * nx, oy + l * ny, oz + l * nz)
 
 
-def get_interpolatorXYZ(o, n):
-    if n == 0:
-        if o == 0:
-            return lambda l: 0
-        else:
-            return lambda l: o
-    else:  # n != 0
-        if o == 0:
-            return lambda l: l * n
-        else:
-            return lambda l: o + l * n
-
-# @profile
-
-
 def make_line(steps, size, v1, v2, center, normalize, mode):
     # get the scaled direction (based on mode, size & normalize)
     if mode == "AB":
@@ -95,53 +79,14 @@ def make_line(steps, size, v1, v2, center, normalize, mode):
 
     nx, ny, nz = [nx * scale, ny * scale, nz * scale]
 
-    # A: VECTOR BASED INTERPOLATORS
-    # case a0 : one lambda for all
-    # vec = lambda l: (v1[0] + l * nx, v1[1] + l * ny, v1[2] + l * nz)
-
-    # case a1 : array of lambdas (nx,ny,nz == 0)
     vec = get_vector_interpolator(v1[0], v1[1], v1[2], nx, ny, nz)
-
-    # case a2 : if/else right here
-    # if nx == 0:
-    #     if ny == 0:
-    #         if nz == 0:
-    #             vec =  lambda l: (v1[0], v1[1], v1[2])
-    #         else:
-    #             vec =  lambda l: (v1[0], v1[1], v1[2] + l * nz)
-    #     else:  # ny != 0
-    #         if nz == 0:
-    #             vec =  lambda l: (v1[0], v1[1] + l * ny, v1[2])
-    #         else:
-    #             vec =  lambda l: (v1[0], v1[1] + l * ny, v1[2] + l * nz)
-    # else:  # nx != 0
-    #     if ny == 0:
-    #         if nz == 0:
-    #             vec =  lambda l: (v1[0] + l * nx, v1[1], v1[2])
-    #         else:
-    #             vec =  lambda l: (v1[0] + l * nx, v1[1], v1[2] + l * nz)
-    #     else:  # ny != 0
-    #         if nz == 0:
-    #             vec =  lambda l: (v1[0] + l * nx, v1[1] + l * ny, v1[2])
-    #         else:
-    #             vec =  lambda l: (v1[0] + l * nx, v1[1] + l * ny, v1[2] + l * nz)
-
-    # B: COMPONENT based interpolators
-    # case b1 : if/else
-    # x = get_interpolatorXYZ(v1[0], nx)
-    # y = get_interpolatorXYZ(v1[1], ny)
-    # z = get_interpolatorXYZ(v1[2], nz)
-
-    # case b2 : lambda of component based interpolators
-    # vec = lambda l: (x(l), y(l), z(l))
 
     verts = []
     add_vert = verts.append
     l = -stepsLength / 2 if center else 0
     for s in [0.0] + steps:
         l = l + s
-        add_vert(vec(l))  # uncomment for cases a1,a2,b2
-        # add_vert((x(l), y(l), z(l))) # uncomment for cases b1
+        add_vert(vec(l))
     edges = get_edge_list(len(steps))
 
     return verts, edges
@@ -157,7 +102,7 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
     bl_icon = 'GRIP'
 
     def update_sockets(self, context):
-        ''' Swap V1/V2 sockets to AB/OD based on selected mode '''
+        ''' Swap V1/V2 input sockets to AB/OD based on selected mode '''
         for s, v in zip(self.inputs[-2:], self.mode):
             s.name = socket_names[v]
             s.prop_name = "point_" + v
@@ -263,12 +208,9 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
         row.prop(self, "center", toggle=True)
         row.prop(self, "normalize", toggle=True)
 
-    @profile
     def process(self):
         if not any(s.is_linked for s in self.outputs):
             return
-
-        print("processing node")
 
         inputs = self.inputs
         input_num = inputs["Num"].sv_get()
@@ -300,7 +242,6 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
 
         if self.outputs['Verts'].is_linked:
             self.outputs['Verts'].sv_set(vertList)
-
         if self.outputs['Edges'].is_linked:
             self.outputs['Edges'].sv_set(edgeList)
 
