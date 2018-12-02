@@ -31,7 +31,7 @@ modeItems = [
 
 directions = {"X": [1, 0, 0], "Y": [0, 1, 0], "Z": [0, 0, 1]}
 
-V = { "AB": ["Point A", "Point B"], "OD": ["Origin", "Direction"] }
+socket_names = { "A" : "Point A", "B": "Point B", "O" : "Origin" , "D": "Distance" }
 
 def get_vector_interpolator(ox, oy, oz, nx, ny, nz):
     ''' Get the optimal vector interpolator to speed up the line generation '''
@@ -58,6 +58,7 @@ def get_vector_interpolator(ox, oy, oz, nx, ny, nz):
             else:
                 return lambda l: (ox + l * nx, oy + l * ny, oz + l * nz)
 
+
 def get_interpolatorXYZ(o, n):
     if n == 0:
         if o == 0:
@@ -71,6 +72,8 @@ def get_interpolatorXYZ(o, n):
             return lambda l: o + l * n
 
 # @profile
+
+
 def make_line(steps, size, v1, v2, center, normalize, mode):
     # get the scaled direction (based on mode, size & normalize)
     if mode == "AB":
@@ -137,7 +140,7 @@ def make_line(steps, size, v1, v2, center, normalize, mode):
     l = -stepsLength / 2 if center else 0
     for s in [0.0] + steps:
         l = l + s
-        add_vert(vec(l)) # uncomment for cases a1,a2,b2
+        add_vert(vec(l))  # uncomment for cases a1,a2,b2
         # add_vert((x(l), y(l), z(l))) # uncomment for cases b1
     edges = get_edge_list(len(steps))
 
@@ -154,16 +157,18 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
     bl_icon = 'GRIP'
 
     def update_sockets(self, context):
+        ''' Swap V1/V2 sockets to AB/OD based on selected mode '''
+        for s, v in zip(self.inputs[-2:], self.mode):
+            s.name = socket_names[v]
+            s.prop_name = "point_" + v
+
+        # keep the AB / OB props values synced when changing mode
         if self.mode == "AB":
-            socket1 = self.inputs[V["OD"][0]]
-            socket2 = self.inputs[V["OD"][1]]
-            socket1.replace_socket("StringsSocket", V["AB"][0]).prop_name = "point_A"
-            socket1.replace_socket("StringsSocket", V["AB"][1]).prop_name = "point_B"
-        else:  # OD
-            socket1 = self.inputs[V["AB"][0]]
-            socket2 = self.inputs[V["AB"][1]]
-            socket1.replace_socket("StringsSocket", V["OD"][0]).prop_name = "point_O"
-            socket1.replace_socket("StringsSocket", V["OD"][1]).prop_name = "point_D"
+            self.point_A = self.point_O
+            self.point_B = self.point_D
+        else:
+            self.point_O = self.point_A
+            self.point_D = self.point_B
 
     def set_direction(self, operator):
         self.direction = operator.direction
@@ -174,56 +179,62 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
         self.inputs["Size"].hide_safe = not self.normalize
         updateNode(self, context)
 
-    def update_direction(self, context):
+    def update_xyz_direction(self, context):
         self.point_O = [0, 0, 0]
         self.point_D = directions[self.direction]
 
     def update_mode(self, context):
+        if self.mode == self.last_mode:
+            return
+
+        self.last_mode = self.mode
         self.update_sockets(context)
         updateNode(self, context)
 
     direction = StringProperty(
-        name="Direction", default="X", update=update_direction)
+        name="Direction", default="X", update=update_xyz_direction)
 
     mode = EnumProperty(
         name="Mode", items=modeItems, default="OD", update=update_mode)
 
+    last_mode = EnumProperty(
+        name="Last Mode", items=modeItems, default="OD")
+
     num = IntProperty(
-        name='Num Verts', description='Number of Vertices',
+        name="Num Verts", description="Number of Vertices",
         default=2, min=2, update=updateNode)
 
     step = FloatProperty(
-        name='Step', description='Step length',
+        name="Step", description="Step length",
         default=1.0, update=updateNode)
 
     center = BoolProperty(
-        name='Center', description='Center the line',
+        name="Center", description="Center the line",
         default=False, update=updateNode)
 
     normalize = BoolProperty(
-        name='Normalize', description='Normalize line to size',
+        name="Normalize", description="Normalize line to size",
         default=False, update=update_normalize)
 
     size = FloatProperty(
-        name='Size', description='Size of the normalized line',
+        name="Size", description="Size of the normalized line",
         default=10.0, update=updateNode)
 
     point_A = FloatVectorProperty(
-        name='Point A', description='Line starting point',
+        name="Point A", description="Line's startring point",
         size=3, default=(0, 0, 0), update=updateNode)
 
     point_B = FloatVectorProperty(
-        name='Point B', description='Line ending point',
+        name="Point B", description="Line's ending point",
         size=3, default=(1, 0, 0), update=updateNode)
 
     point_O = FloatVectorProperty(
-        name='Origin', description='Line origin',
+        name="Origin", description="Line's origin",
         size=3, default=(0, 0, 0), update=updateNode)
 
     point_D = FloatVectorProperty(
-        name='Direction', description='Line direction',
+        name="Direction", description="Line's direction",
         size=3, default=(1, 0, 0), update=updateNode)
-
 
     def sv_init(self, context):
         self.inputs.new('StringsSocket', "Num").prop_name = 'num'
@@ -239,11 +250,11 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
     def draw_buttons(self, context, layout):
         col = layout.column(align=False)
 
-        # if not self.inputs[V[self.mode][1]].is_linked:
-        # row = col.row(align=True)
-        # for direction in "XYZ":
-        #     op = row.operator("node.set_line_direction", text=direction)
-        #     op.direction = direction
+        if not self.inputs[-1].is_linked:
+            row = col.row(align=True)
+            for direction in "XYZ":
+                op = row.operator("node.set_line_direction", text=direction)
+                op.direction = direction
 
         col = layout.column(align=True)
         row = col.row(align=True)
@@ -252,18 +263,19 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
         row.prop(self, "center", toggle=True)
         row.prop(self, "normalize", toggle=True)
 
-
     @profile
     def process(self):
         if not any(s.is_linked for s in self.outputs):
             return
 
+        print("processing node")
+
         inputs = self.inputs
         input_num = inputs["Num"].sv_get()
         input_step = inputs["Step"].sv_get()
         input_size = inputs["Size"].sv_get()[0]
-        input_V1 = inputs[V[self.mode][0]].sv_get()[0]
-        input_V2 = inputs[V[self.mode][1]].sv_get()[0]
+        input_V1 = inputs[-2].sv_get()[0]
+        input_V2 = inputs[-1].sv_get()[0]
 
         maxNum = 0
         params = match_long_repeat([input_num, input_step])
@@ -276,7 +288,7 @@ class SvLineNodeMK4(bpy.types.Node, SverchCustomTreeNode):
                 fullList(steps, nn - 1)  # extend step list if needed
                 stepsList.append(steps)
 
-        update_edge_cache(maxNum) # help the edge generator get faster
+        update_edge_cache(maxNum)  # help the edge generator get faster
 
         c, n, m = [self.center, self.normalize, self.mode]
         params = match_long_repeat([stepsList, input_size, input_V1, input_V2])
