@@ -20,7 +20,7 @@ import bpy
 from bpy.props import IntProperty, FloatProperty, BoolProperty, EnumProperty, FloatVectorProperty
 
 from math import sin, cos, pi, sqrt, radians
-from mathutils import Vector, Matrix
+from mathutils import Vector, Matrix, Quaternion
 import copy
 
 from sverchok.node_tree import SverchCustomTreeNode
@@ -30,6 +30,9 @@ import itertools
 # dictionary to store once the unit/untransformed hypercube verts, edges & polys
 _hypercube = {}
 
+polytopItems = [
+    ("HYPERCUBE", "HyperCube", "4 dimensional cube", 0)
+]
 
 def flip(n, v):
     '''
@@ -331,10 +334,11 @@ def get_hypercube():
 class SvHyperCubeNode(bpy.types.Node, SverchCustomTreeNode):
     ''' HyperCube '''
     bl_idname = 'SvHyperCubeNode'
-    bl_label = 'Hypercube'
+    bl_label = '4D Polytopes'
 
     def sv_init(self, context):
-        self.outputs.new('VerticesSocket', "Verts")
+        self.outputs.new('SvQuaternionSocket', "Verts")
+        # self.outputs.new('VerticesSocket', "Verts")
         self.outputs.new('StringsSocket', "Edges")
         self.outputs.new('StringsSocket', "Polys")
 
@@ -354,7 +358,8 @@ class SvHyperCubeNode(bpy.types.Node, SverchCustomTreeNode):
         inputs = self.inputs
 
         verts4D, edges, polys, cells, names = get_hypercube()
-        verts = [list(v) for v in verts4D]
+        verts = [Quaternion(v) for v in verts4D]
+        # verts = [list(v) for v in verts4D]
 
         vertList = []
         edgeList = []

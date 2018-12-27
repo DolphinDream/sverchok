@@ -46,6 +46,14 @@ def is_matrix_to_quaternion(self):
 def is_quaternion_to_matrix(self):
     return cross_test_socket(self, 'q', 'm')
 
+
+def is_vector_to_quaternion(self):
+    return cross_test_socket(self, 'v', 'q')
+
+
+def is_quaternion_to_vector(self):
+    return cross_test_socket(self, 'q', 'v')
+
 # ---
 
 
@@ -95,6 +103,45 @@ def get_quaternions_from_matrices(data):
     return [quaternions]
 
 
+def get_quaternions_from_vectors(data):
+    print("converting vectors to quaternions")
+    quaternions = []
+    collect_quaternion = quaternions.append
+
+    def get_all(data):
+        for vector in data:
+            print("vector=", vector)
+            q = Quaternion()
+            # q = Quaternion(vector)
+            collect_quaternion(q)
+
+    get_all(data)
+    return [quaternions]
+
+
+def get_vectors_from_quaternions(data):
+    print("converting quaternions to vectors")
+    vectors = []
+    collect_vector = vectors.append
+
+    def get_all(data):
+        for q in data:
+            if isinstance(q, list):
+                vv = []
+                for a in q:
+                    vv.append(tuple(a))
+                print("this is a list")
+            else:
+                vv = q
+                print("this is NOT a list")
+            print("quaternion=", q)
+            collect_vector(vv)
+        print("vectors=", vectors)
+
+    get_all(data)
+    return [vectors]
+
+
 def is_matrix(mat):  # doesnt work with Mathutils.Matrix ?
     ''' expensive function call? '''
     if not isinstance(mat, (tuple, list)) or not len(mat) == 4:
@@ -120,17 +167,21 @@ def get_locs_from_matrices(data):
     get_all(data)
     return [locations]
 
+
 class ImplicitConversionProhibited(Exception):
+
     def __init__(self, socket):
         super().__init__()
         self.socket = socket
         self.node = socket.node
         self.from_socket_type = socket.other.bl_idname
         self.to_socket_type = socket.bl_idname
-        self.message = "Implicit conversion from socket type {} to socket type {} is not supported for socket {} of node {}. Please use explicit conversion nodes.".format(self.from_socket_type, self.to_socket_type, socket.name, socket.node.name)
+        self.message = "Implicit conversion from socket type {} to socket type {} is not supported for socket {} of node {}. Please use explicit conversion nodes.".format(
+            self.from_socket_type, self.to_socket_type, socket.name, socket.node.name)
 
     def __str__(self):
         return self.message
+
 
 class NoImplicitConversionPolicy(object):
     """
@@ -140,6 +191,7 @@ class NoImplicitConversionPolicy(object):
     @classmethod
     def convert(cls, socket, source_data):
         raise ImplicitConversionProhibited(socket)
+
 
 class LenientImplicitConversionPolicy(object):
     """
@@ -153,6 +205,7 @@ class LenientImplicitConversionPolicy(object):
     @classmethod
     def convert(cls, socket, source_data):
         return source_data
+
 
 class DefaultImplicitConversionPolicy(NoImplicitConversionPolicy):
     """
@@ -168,6 +221,10 @@ class DefaultImplicitConversionPolicy(NoImplicitConversionPolicy):
             return cls.quaternions_to_matrices(socket, source_data)
         elif is_matrix_to_quaternion(socket):
             return cls.matrices_to_quaternions(socket, source_data)
+        elif is_quaternion_to_vector(socket):
+            return cls.quaternions_to_vectors(socket, source_data)
+        elif is_vector_to_quaternion(socket):
+            return cls.vectors_to_quaternions(socket, source_data)
         elif socket.bl_idname in cls.get_lenient_socket_types():
             return source_data
         else:
@@ -188,7 +245,7 @@ class DefaultImplicitConversionPolicy(NoImplicitConversionPolicy):
         out = get_matrices_from_locs(source_data)
         socket.num_matrices = len(out)
         return out
-    
+
     @classmethod
     def matrices_to_vectors(cls, socket, source_data):
         return get_locs_from_matrices(source_data)
@@ -203,3 +260,10 @@ class DefaultImplicitConversionPolicy(NoImplicitConversionPolicy):
     def matrices_to_quaternions(cls, socket, source_data):
         return get_quaternions_from_matrices(source_data)
 
+    @classmethod
+    def vectors_to_quaternions(cls, socket, source_data):
+        return get_quaternions_from_vectors(source_data)
+
+    @classmethod
+    def quaternions_to_vectors(cls, socket, source_data):
+        return get_vectors_from_quaternions(source_data)

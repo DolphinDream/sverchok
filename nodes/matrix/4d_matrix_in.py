@@ -36,9 +36,9 @@ angleTypes = [
 
 
 def get_T_matrix(t):
-    '''
-        Return the 5D Translation matrix given the 4D translation vector.
-    '''
+    """
+    Return the 5D Translation matrix given the 4D translation vector.
+    """
     T = numpy.matrix(numpy.identity(5))
     for i in range(4):
         T[i, 4] = t[i]
@@ -46,9 +46,9 @@ def get_T_matrix(t):
 
 
 def get_S_matrix(s):
-    '''
-        Return the 5D Scale matrix given the 4D scale vector.
-    '''
+    """
+    Return the 5D Scale matrix given the 4D scale vector.
+    """
     S = numpy.matrix(numpy.identity(5))
     for i in range(4):
         S[i, i] = s[i]
@@ -56,9 +56,9 @@ def get_S_matrix(s):
 
 
 def get_R_matrix(a1=0, a2=0, a3=0, a4=0, a5=0, a6=0):
-    '''
-        Return the 5D Rotation matrix given the 6 rotation angles.
-    '''
+    """
+    Return the 5D Rotation matrix given the 6 rotation angles.
+    """
     angles = [a1, a2, a3, a4, a5, a6]
     R = numpy.matrix(numpy.identity(5))
     for (i, j), a in zip(combinations(range(4), 2), angles):
@@ -71,10 +71,10 @@ def get_R_matrix(a1=0, a2=0, a3=0, a4=0, a5=0, a6=0):
     return R
 
 def get_composite_matrix(a1, a2, a3, a4, a5, a6, s, t):
-    '''
-        Return the 5D composite matrix T * R * S given the rotation angles
-        the translation and the scale 4D vectors.
-    '''
+    """
+    Return the 4D(5D) composite matrix T * R * S given the rotation angles
+    the 4D translation and the 4D scale.
+    """
     T = get_T_matrix(t)
     R = get_R_matrix(a1, a2, a3, a4, a5, a6)
     S = get_S_matrix(s)
@@ -83,7 +83,10 @@ def get_composite_matrix(a1, a2, a3, a4, a5, a6, s, t):
 
 
 class Sv4DMatrixInNode(bpy.types.Node, SverchCustomTreeNode):
-    ''' 4D Matrix In '''
+    """
+    Triggers: 4D Matrix In
+    Tooltip: Generate a 4D (5D) matrix to transform 4D points
+    """
     bl_idname = 'Sv4DMatrixInNode'
     bl_label = '4D Matrix In'
 
@@ -93,9 +96,9 @@ class Sv4DMatrixInNode(bpy.types.Node, SverchCustomTreeNode):
         updateNode(self, context)
 
     def update_mode(self, context):
-        '''
-            Update angle values when switching mode to keep the same radian values
-        '''
+        """
+        Update angle values when switching mode to keep the same radian values
+        """
         if self.lastAngleType == self.angleType:
             return
 
@@ -171,12 +174,14 @@ class Sv4DMatrixInNode(bpy.types.Node, SverchCustomTreeNode):
         size=4,
         name="Scale", description="Scale in 4D space",
         default=(1, 1, 1, 1),
+        subtype="QUATERNION",
         update=updateNode)
 
     translate = FloatVectorProperty(
         size=4,
         name="Translate", description="Translate in 4D space",
         default=(0, 0, 0, 0),
+        subtype="QUATERNION",
         update=updateNode)
 
     syncing = BoolProperty(
@@ -190,8 +195,8 @@ class Sv4DMatrixInNode(bpy.types.Node, SverchCustomTreeNode):
         self.inputs.new('StringsSocket', "A4").prop_name = 'angle_a4'
         self.inputs.new('StringsSocket', "A5").prop_name = 'angle_a5'
         self.inputs.new('StringsSocket', "A6").prop_name = 'angle_a6'
-        self.inputs.new('VerticesSocket', "Scale").prop_name = 'scale'
-        self.inputs.new('VerticesSocket', "Translate").prop_name = 'translate'
+        self.inputs.new('SvQuaternionSocket', "Scale").prop_name = 'scale'
+        self.inputs.new('SvQuaternionSocket', "Translate").prop_name = 'translate'
 
         self.outputs.new('StringsSocket', "Matrix").nodule_color = m4d_color
 

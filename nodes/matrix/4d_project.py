@@ -21,27 +21,38 @@ from bpy.props import IntProperty, FloatProperty, BoolProperty, EnumProperty, Fl
 
 from sverchok.node_tree import SverchCustomTreeNode
 from sverchok.data_structure import updateNode, match_long_repeat
+from mathutils import Quaternion
 
 
 def project(vert4D, d):
-    '''
-        Project a 4D vector onto 3D space given the projection distance.
-    '''
+    """
+    Project a 4D vector onto 3D space given the projection distance.
+    """
     cx, cy, cz = [0.0, 0.0, 0.0]  # center (projection origin)
-    x, y, z, t = vert4D
-    return [x + (cx - x) * t / d, y + (cy - y) * t / d, z + (cz - z) * t / d]
+    x, y, z, w = vert4D
+    # w, x, y, z = vert4D
+    # return [x + (cx - x) * d / w, y + (cy - y) * d / w, z + (cz - z) * d / w]
+    s = d / (d + w)
+    xx = x * s
+    yy = y * s
+    zz = z * s
+    return [xx, yy, zz]
+    # return [x + (cx - x) * w / d, y + (cy - y) * w / d, z + (cz - z) * w / d]
 
 
 def project_verts(verts4D, d):
-    '''
-        Project the 4D verts onto 3D space given the projection distance.
-    '''
+    """
+    Project the 4D verts onto 3D space given the projection distance.
+    """
     verts3D = [project(verts4D[i], d) for i in range(len(verts4D))]
     return verts3D
 
 
 class Sv4DProjectNode(bpy.types.Node, SverchCustomTreeNode):
-    ''' 4D Project '''
+    """
+    Triggers: 4D Projection
+    Tooltips: Project from 4D to 3D
+    """
     bl_idname = 'Sv4DProjectNode'
     bl_label = '4D Project'
 
@@ -52,7 +63,7 @@ class Sv4DProjectNode(bpy.types.Node, SverchCustomTreeNode):
 
     def sv_init(self, context):
         # self.width = 160
-        self.inputs.new('VerticesSocket', "Verts")
+        self.inputs.new('SvQuaternionSocket', "Quaternions")
         self.inputs.new('StringsSocket', "Edges")
         self.inputs.new('StringsSocket', "Polys")
 
@@ -70,9 +81,21 @@ class Sv4DProjectNode(bpy.types.Node, SverchCustomTreeNode):
 
         # input values lists
         inputs = self.inputs
-        input_v = inputs["Verts"].sv_get()
-        input_e = inputs["Edges"].sv_get()
-        input_p = inputs["Polys"].sv_get()
+
+        if inputs["Quaternions"].is_linked:
+            input_v = inputs["Quaternions"].sv_get()
+        else:
+            return
+
+        if inputs["Edges"].is_linked:
+            input_e = inputs["Edges"].sv_get()
+        else:
+            input_e = [[]]
+
+        if inputs["Polys"].is_linked:
+            input_p = inputs["Polys"].sv_get()
+        else:
+            input_p = [[]]
 
         input_d = inputs["D"].sv_get()[0]
 
@@ -87,9 +110,12 @@ class Sv4DProjectNode(bpy.types.Node, SverchCustomTreeNode):
             edgeList.append(e)
             polyList.append(p)
 
-        outputs['Verts'].sv_set(vertList)
-        outputs['Edges'].sv_set(edgeList)
-        outputs['Polys'].sv_set(polyList)
+        if outputs["Verts"].is_linked:
+            outputs["Verts"].sv_set(vertList)
+        if outputs["Edges"].is_linked:
+            outputs["Edges"].sv_set(edgeList)
+        if outputs["Polys"].is_linked:
+            outputs["Polys"].sv_set(polyList)
 
 
 def register():
