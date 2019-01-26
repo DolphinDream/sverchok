@@ -307,6 +307,8 @@
     SvRandomizeVerticesNode
     SvCastNode
     SvFormulaDeformMK2Node
+    ---
+	Sv3DProjectNode
 
 ## Modifier Change
     SvDeleteLooseNode
