@@ -153,10 +153,10 @@ class Sv3DProjectNode(bpy.types.Node, SverchCustomTreeNode):
     bl_idname = 'Sv3DProjectNode'
     bl_label = '3D Projection'
 
-    projection_type = EnumProperty(
+    projection_type : EnumProperty(
         name="Type", items=projection_type_items, default="PLANAR", update=updateNode)
 
-    distance = FloatProperty(
+    distance : FloatProperty(
         name="Distance", description="Projection Distance",
         default=2.0, update=updateNode)
 
