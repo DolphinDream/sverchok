@@ -161,18 +161,18 @@ class Sv3DProjectNode(bpy.types.Node, SverchCustomTreeNode):
         default=2.0, update=updateNode)
 
     def sv_init(self, context):
-        self.inputs.new('VerticesSocket', "Verts")
-        self.inputs.new('StringsSocket', "Edges")
-        self.inputs.new('StringsSocket', "Polys")
+        self.inputs.new('SvVerticesSocket', "Verts")
+        self.inputs.new('SvStringsSocket', "Edges")
+        self.inputs.new('SvStringsSocket', "Polys")
         # projection screen location and orientation
-        self.inputs.new('MatrixSocket', "Matrix")
+        self.inputs.new('SvMatrixSocket', "Matrix")
         # distance from the projection point to the projection screen
-        self.inputs.new('StringsSocket', "D").prop_name = 'distance'
+        self.inputs.new('SvStringsSocket', "D").prop_name = 'distance'
 
-        self.outputs.new('VerticesSocket', "Verts")
-        self.outputs.new('StringsSocket', "Edges")
-        self.outputs.new('StringsSocket', "Polys")
-        self.outputs.new('VerticesSocket', "Focus")
+        self.outputs.new('SvVerticesSocket', "Verts")
+        self.outputs.new('SvStringsSocket', "Edges")
+        self.outputs.new('SvStringsSocket', "Polys")
+        self.outputs.new('SvVerticesSocket', "Focus")
 
     def draw_buttons(self, context, layout):
         layout.prop(self, "projection_type", text="")
