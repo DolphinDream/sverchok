@@ -49,8 +49,8 @@ def projection_cylindrical(verts3D, m, d):
     ox, oy, oz = [m[0][3], m[1][3], m[2][3]]  # projection cylinder origin
     nx, ny, nz = [m[0][2], m[1][2], m[2][2]]  # projection cylinder axis
 
-    vertList = []
-    focusList = []
+    vert_list = []
+    focus_list = []
     for vert in verts3D:
         x, y, z = vert
         # vector relative to the center of the cylinder (V-O)
@@ -72,11 +72,11 @@ def projection_cylindrical(verts3D, m, d):
         yy = oy + dy * s
         zz = oz + dz * s
 
-        vertList.append([xx, yy, zz])
+        vert_list.append([xx, yy, zz])
 
-    focusList = [[ox, oy, oz]]
+    focus_list = [[ox, oy, oz]]
 
-    return vertList, focusList
+    return vert_list, focus_list
 
 
 def projection_spherical(verts3D, m, d):
@@ -85,8 +85,8 @@ def projection_spherical(verts3D, m, d):
     """
     ox, oy, oz = [m[0][3], m[1][3], m[2][3]]  # projection sphere origin
 
-    vertList = []
-    focusList = []
+    vert_list = []
+    focus_list = []
     for vert in verts3D:
         x, y, z = vert
         dx = x - ox
@@ -99,11 +99,11 @@ def projection_spherical(verts3D, m, d):
         yy = oy + dy * d/r
         zz = oz + dz * d/r
 
-        vertList.append([xx, yy, zz])
+        vert_list.append([xx, yy, zz])
 
-    focusList = [[ox, oy, oz]]
+    focus_list = [[ox, oy, oz]]
 
-    return vertList, focusList
+    return vert_list, focus_list
 
 
 def projection_planar(verts3D, m, d):
@@ -113,8 +113,8 @@ def projection_planar(verts3D, m, d):
     ox, oy, oz = [m[0][3], m[1][3], m[2][3]]  # projection screen origin
     nx, ny, nz = [m[0][2], m[1][2], m[2][2]]  # projection screen normal
 
-    vertList = []
-    focusList = []
+    vert_list = []
+    focus_list = []
     for vert in verts3D:
         x, y, z = vert
         dx = x - ox
@@ -133,16 +133,16 @@ def projection_planar(verts3D, m, d):
         py = oy + ya
         pz = oz + za
 
-        vertList.append([px, py, pz])
+        vert_list.append([px, py, pz])
 
     # Focus location m * D:
     #  Xx Yx Zx Tx        0     Tx - d * Zx
     #  Xy Yy Zy Ty   *    0  =  Ty - d * Zy
     #  Xz Yz Zz Tz      - d     Tz - d * Zz
     #  0  0  0  1         1     1
-    focusList = [[ox - d*nx, oy - d*ny, oz - d * nz]]
+    focus_list = [[ox - d*nx, oy - d*ny, oz - d * nz]]
 
-    return vertList, focusList
+    return vert_list, focus_list
 
 
 class Sv3DProjectNode(bpy.types.Node, SverchCustomTreeNode):
@@ -214,25 +214,25 @@ class Sv3DProjectNode(bpy.types.Node, SverchCustomTreeNode):
         elif self.projection_type == "SPHERICAL":
             projector = projection_spherical
 
-        vertList = []
-        edgeList = []
-        polyList = []
-        focusList = []
+        vert_list = []
+        edge_list = []
+        poly_list = []
+        focus_list = []
         for v, e, p, m, d in zip(*params):
             verts, focus = projector(v, m, d)
-            vertList.append(verts)
-            edgeList.append(e)
-            polyList.append(p)
-            focusList.append(focus)
+            vert_list.append(verts)
+            edge_list.append(e)
+            poly_list.append(p)
+            focus_list.append(focus)
 
         if outputs["Verts"].is_linked:
-            outputs["Verts"].sv_set(vertList)
+            outputs["Verts"].sv_set(vert_list)
         if outputs["Edges"].is_linked:
-            outputs["Edges"].sv_set(edgeList)
+            outputs["Edges"].sv_set(edge_list)
         if outputs["Polys"].is_linked:
-            outputs["Polys"].sv_set(polyList)
+            outputs["Polys"].sv_set(poly_list)
         if outputs["Focus"].is_linked:
-            outputs["Focus"].sv_set(focusList)
+            outputs["Focus"].sv_set(focus_list)
 
 
 def register():
