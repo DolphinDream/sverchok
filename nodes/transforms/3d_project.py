@@ -32,7 +32,7 @@ projection_type_items = [
     ("CYLINDRICAL", "Cylindrical", "Project onto a cylinder", 2)]
 
 
-projectionItems = [
+projection_items = [
     ("PERSPECTIVE",  "Perspective",  "Perspective projection", 0),
     ("ORTHOGRAPHIC", "Orthographic", "Orthographic projection", 1)]
 
@@ -44,10 +44,14 @@ EPSILON = 1e-10
 @profile
 def projection_cylindrical(verts3D, m, d):
     """
+    Project 3D verts onto a cylindrical surface
 
+    verts3D : 3D verts to project
+    m : matrix orienting the cylinder (Z along cylinder axis)
+    d : distance between projector (cylinder origin) and the cylinder surface (cylinder radius)
     """
     ox, oy, oz = [m[0][3], m[1][3], m[2][3]]  # projection cylinder origin
-    nx, ny, nz = [m[0][2], m[1][2], m[2][2]]  # projection cylinder axis
+    nx, ny, nz = [m[0][2], m[1][2], m[2][2]]  # projection cylinder axis (Z)
 
     vert_list = []
     focus_list = []
@@ -57,15 +61,15 @@ def projection_cylindrical(verts3D, m, d):
         dx = x - ox
         dy = y - oy
         dz = z - oz
-        # magnitude of the vector projected parallel to the cylinder normal
+        # magnitude of the vector projected PARALLEL to the cylinder axis
         vn = dx * nx + dy * ny + dz * nz
-        # vector projected perpendicular to the cylinder normal
+        # vector projected PERPENDICULAR to the cylinder axis
         xn = dx - vn * nx
         yn = dy - vn * ny
         zn = dz - vn * nz
         # magnitude of the perpendicular projection
         r = sqrt(xn * xn + yn * yn + zn * zn) + EPSILON
-        # factor to scale the vector to touch the cylinder
+        # factor to scale the vector to touch the cylinder (cached for performance)
         s = d / r
         # extended vector touching the cylinder
         xx = ox + dx * s
@@ -81,7 +85,11 @@ def projection_cylindrical(verts3D, m, d):
 
 def projection_spherical(verts3D, m, d):
     """
+    Project 3D verts onto a spherical surface
 
+    verts3D : 3D verts to project
+    m : matrix orienting the sphere (no effect)
+    d : distance between projector (sphere origin) and the sphere surface (sphere radius)
     """
     ox, oy, oz = [m[0][3], m[1][3], m[2][3]]  # projection sphere origin
 
@@ -89,15 +97,18 @@ def projection_spherical(verts3D, m, d):
     focus_list = []
     for vert in verts3D:
         x, y, z = vert
+        # vector relative to the center of the sphere (V-O)
         dx = x - ox
         dy = y - oy
         dz = z - oz
-
-        r = sqrt(dx*dx + dy*dy + dz*dz) + EPSILON
-
-        xx = ox + dx * d/r
-        yy = oy + dy * d/r
-        zz = oz + dz * d/r
+        # magnitude of the vertex vector relative to the sphere origin
+        r = sqrt(dx * dx + dy * dy + dz * dz) + EPSILON
+        # factor to scale the vector to touch the sphere (cached for performance)
+        s = d / r
+        # extended vector touching the sphere
+        xx = ox + dx * s
+        yy = oy + dy * s
+        zz = oz + dz * s
 
         vert_list.append([xx, yy, zz])
 
@@ -108,39 +119,43 @@ def projection_spherical(verts3D, m, d):
 
 def projection_planar(verts3D, m, d):
     """
-    Project the 3D verts onto 2D space given the projection distance
+    Project 3D verts onto a planar surface
+
+    verts3D : 3D verts to project
+    m : matrix orienting the plane normal
+    d : distance between the projector point and the plane surface
+
+    # Projection point (focus) location is given by m * D:
+    #  Xx Yx Zx Tx        0     Tx - d * Zx
+    #  Xy Yy Zy Ty   *    0  =  Ty - d * Zy
+    #  Xz Yz Zz Tz      - d     Tz - d * Zz
+    #  0  0  0  1         1     1
     """
-    ox, oy, oz = [m[0][3], m[1][3], m[2][3]]  # projection screen origin
+    tx, ty, tz = [m[0][3], m[1][3], m[2][3]]  # projection screen location
     nx, ny, nz = [m[0][2], m[1][2], m[2][2]]  # projection screen normal
+
+    ox, oy, oz = [tx - d * nx, ty - d * ny, tz - d * nz] # projection point
 
     vert_list = []
     focus_list = []
     for vert in verts3D:
         x, y, z = vert
+        # vector relative to the projection point (V-O)
         dx = x - ox
         dy = y - oy
         dz = z - oz
+        # magnitude of the vertex vector relative to the plane origin
+        l = (dx * nx + dy * ny + dz * nz) + EPSILON
+        # factor to scale the vector to touch the plane (cached for performance)
+        s = d / l
+        # extended vector touching the plane
+        xx = ox + dx * s
+        yy = oy + dy * s
+        zz = oz + dz * s
 
-        an = dx * nx + dy * ny + dz * nz  # v projection along the plane normal
+        vert_list.append([xx, yy, zz])
 
-        s = d / (d + an)  # perspective factor
-
-        xa = s * (dx - an * nx)
-        ya = s * (dy - an * ny)
-        za = s * (dz - an * nz)
-
-        px = ox + xa
-        py = oy + ya
-        pz = oz + za
-
-        vert_list.append([px, py, pz])
-
-    # Focus location m * D:
-    #  Xx Yx Zx Tx        0     Tx - d * Zx
-    #  Xy Yy Zy Ty   *    0  =  Ty - d * Zy
-    #  Xz Yz Zz Tz      - d     Tz - d * Zz
-    #  0  0  0  1         1     1
-    focus_list = [[ox - d*nx, oy - d*ny, oz - d * nz]]
+    focus_list = [[ox, oy, oz]]
 
     return vert_list, focus_list
 
@@ -153,10 +168,10 @@ class Sv3DProjectNode(bpy.types.Node, SverchCustomTreeNode):
     bl_idname = 'Sv3DProjectNode'
     bl_label = '3D Projection'
 
-    projection_type : EnumProperty(
+    projection_type: EnumProperty(
         name="Type", items=projection_type_items, default="PLANAR", update=updateNode)
 
-    distance : FloatProperty(
+    distance: FloatProperty(
         name="Distance", description="Projection Distance",
         default=2.0, update=updateNode)
 
@@ -191,15 +206,8 @@ class Sv3DProjectNode(bpy.types.Node, SverchCustomTreeNode):
         else:
             return
 
-        if inputs["Edges"].is_linked:
-            input_e = inputs["Edges"].sv_get()
-        else:
-            input_e = [[]]
-
-        if inputs["Polys"].is_linked:
-            input_p = inputs["Polys"].sv_get()
-        else:
-            input_p = [[]]
+        input_e = inputs["Edges"].sv_get(default=[[]])
+        input_p = inputs["Polys"].sv_get(default=[[]])
 
         input_m = inputs["Matrix"].sv_get(default=idMat)
 
