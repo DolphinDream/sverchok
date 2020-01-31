@@ -24,6 +24,8 @@ from random import random
 import time
 import mmap
 
+from mathutils import Quaternion
+
 from sverchok.node_tree import SverchCustomTreeNode
 from sverchok.data_structure import updateNode, match_long_repeat
 
@@ -34,7 +36,8 @@ def load_path(filepath):
     # x y z  x y z w
     # x y z  x y z w
     # ...
-    filepath = "/Users/atokirina/Downloads/" + filepath
+    filepath = "/home/marius/Downloads/" + filepath
+    # filepath = "/Users/atokirina/Downloads/" + filepath
     print("loading path: ", filepath)
 
     with open(filepath, 'rb') as file:
@@ -55,8 +58,11 @@ def load_path(filepath):
             l = list(map(float, line.split()))
             v = l[:3]
             q = l[3:]
+            q = Quaternion([q[3], q[0], q[1], q[2]])
+
             verts.append(v)
             quats.append(q)
+
             print("l=", l)
             print("v=", v)
             print("q=", q)
@@ -89,7 +95,7 @@ class SvPathLoadNode(bpy.types.Node, SverchCustomTreeNode):
         vertex_list, quaternion_list = load_path(file_name)
 
         self.outputs['Vertices'].sv_set([vertex_list])
-        self.outputs['Quaternions'].sv_set([quaternion_list])
+        self.outputs['Quaternions'].sv_set(quaternion_list)
 
 
 def register():
