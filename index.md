@@ -191,7 +191,7 @@
     ListShuffleNode
     ListSortNodeMK2
     ListFlipNode
-    
+
 ## Dictionary
     SvDictionaryIn
     SvDictionaryOut
@@ -403,3 +403,4 @@
     SvPlanarEdgenetToPolygons
     SvPulgaPhysicsNode
     SvTopologySimple
+    SvPathLoadNode
