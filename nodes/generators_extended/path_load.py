@@ -27,16 +27,15 @@ import mmap
 from sverchok.node_tree import SverchCustomTreeNode
 from sverchok.data_structure import updateNode, match_long_repeat
 
-def read_sur(filepath):
-    ## the SUR file format is :
-    # numVertices
-    # x y z
-    # x y z
+def load_path(filepath):
+    ## the QMAT file format is :
+    #
+    # numEntries
+    # x y z  x y z w
+    # x y z  x y z w
     # ...
-    # numTriangles
-    # id1 id2 id3
-    # id1 id2 id3
-    # ...
+    filepath = "/Users/atokirina/Downloads/" + filepath
+    print("loading path: ", filepath)
 
     with open(filepath, 'rb') as file:
         # check http://bugs.python.org/issue8046 to have mmap context
@@ -45,37 +44,28 @@ def read_sur(filepath):
         #yield data
         #data.close()
 
-        verts, quaternion = [], []
+        verts, quats = [], []
+        # verts, quats =  [[0,0,0], [1,1,1,1]]
 
-        # read the number of vertices
-        nv = int(data.readline().rstrip())
+        # read the number of locations
+        nl = int(data.readline().rstrip())
         # read the vertex coordinates for all vertices
-        for i in range(nv):
+        for i in range(nl):
             line = data.readline().rstrip()
-            v = list(map(float, line.split()))
+            l = list(map(float, line.split()))
+            v = l[:3]
+            q = l[3:]
             verts.append(v)
+            quats.append(q)
+            print("l=", l)
+            print("v=", v)
+            print("q=", q)
 
-        # read the number of faces
-        nf = int(data.readline().rstrip())
-        # read the face's vertex indices for all faces
-        for i in range(nf):
-            line = data.readline().rstrip()
-            t = list(map(int, line.split()))
-            faces.append(t)
+        print("QMAT file has %d entries" % (nl))
 
-        print("SUR file has %d verts and %d faces" %(nv, nf))
-
-        return verts, faces, norms
+        return verts, quats
 
 
-
-def load_path(file_path):
-    # open file
-    # read content (vertex + quaternion)
-    # convert vertex + quaternion => matrix
-    return [[0,0,0], [1,1,1,1]]
-
-    # return matrices (location + rotation)
 class SvPathLoadNode(bpy.types.Node, SverchCustomTreeNode):
     ''' Load Path from file in vector (3) + quaternion (4) format '''
     bl_idname = 'SvPathLoadNode'
@@ -95,7 +85,8 @@ class SvPathLoadNode(bpy.types.Node, SverchCustomTreeNode):
         if not any(s.is_linked for s in self.outputs):
             return
 
-        vertex_list, quaternion_list = load_path()
+        file_name = "path_size4_barrel_j2xr_distal.qmat"
+        vertex_list, quaternion_list = load_path(file_name)
 
         self.outputs['Vertices'].sv_set([vertex_list])
         self.outputs['Quaternions'].sv_set([quaternion_list])
