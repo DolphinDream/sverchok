@@ -36,8 +36,9 @@ def load_path(filepath):
     # x y z  x y z w
     # x y z  x y z w
     # ...
-    filepath = "/home/marius/Downloads/" + filepath
-    # filepath = "/Users/atokirina/Downloads/" + filepath
+    # homeDir = "/home/marius/Downloads/"
+    homeDir = "/Users/atokirina/Downloads/"
+    filepath = homeDir + filepath
     print("loading path: ", filepath)
 
     with open(filepath, 'rb') as file:
@@ -48,7 +49,6 @@ def load_path(filepath):
         #data.close()
 
         verts, quats = [], []
-        # verts, quats =  [[0,0,0], [1,1,1,1]]
 
         # read the number of locations
         nl = int(data.readline().rstrip())
@@ -63,9 +63,9 @@ def load_path(filepath):
             verts.append(v)
             quats.append(q)
 
-            print("l=", l)
-            print("v=", v)
-            print("q=", q)
+            # print("l=", l)
+            # print("v=", v)
+            # print("q=", q)
 
         print("QMAT file has %d entries" % (nl))
 
