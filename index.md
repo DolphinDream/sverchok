@@ -783,3 +783,4 @@
     SvMiniVoxelizerNode
     SvMotionPathLoadNode
     SvMatrixLoadNode
+    SvPathLoadNode
