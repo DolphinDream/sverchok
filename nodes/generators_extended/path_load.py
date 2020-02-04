@@ -17,7 +17,8 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
-from bpy.props import IntProperty, FloatProperty, BoolProperty, EnumProperty, StringProperty
+from bpy.props import IntProperty, FloatProperty, BoolProperty, EnumProperty, StringProperty, CollectionProperty
+from bpy_extras.io_utils import ImportHelper
 
 from math import sin, cos, pi, sqrt, radians
 from random import random
@@ -33,6 +34,7 @@ from sverchok.data_structure import updateNode, match_long_repeat
 from pprint import pprint
 
 recent_paths_list = set()
+recent_paths_dict = dict()
 
 def load_path(filepath):
     # the QMAT file format is :
@@ -85,20 +87,25 @@ class SvPathLoadNode(bpy.types.Node, SverchCustomTreeNode):
     def set_path(self, filepath):
         filename = os.path.basename(filepath)
         print("setting filepath/filename: ", filepath, filename)
-        recent_paths_list.add(filepath)
+        # recent_paths_list.add(filepath)
+        recent_paths_dict[filename]=filepath
+        self.file_path = filepath
 
     def update_path(self, context):
         print("Updating path: ", self.file_path)
-        recent_paths_list.add(self.file_path)
+        # recent_paths_list.add(self.file_path)
         # load_path(self.file_path)
+        updateNode(self, context)
 
     def update_path_selection(self, context):
-        print("Selected path: ", self.recent_paths)
+        print("Selected path: ", self.selected_path)
+        self.file_path = recent_paths_dict[self.selected_path]
         updateNode(self, context)
 
     def recent_path_items(self, context):
-        recentItems = [(k, k.title(), "", i) for i, k in enumerate(recent_paths_list)]
-
+        # recentItems = [(k, k.title(), "", i) for i, k in enumerate(recent_paths_list)]
+        recentItems = [(k, k, v, i) for i, (k,v) in enumerate(recent_paths_dict.items())]
+        # pprint(recentItems)
         return recentItems
 
     file_path: StringProperty(
@@ -106,21 +113,21 @@ class SvPathLoadNode(bpy.types.Node, SverchCustomTreeNode):
         description="Path file name",
         default="", update=update_path)
 
-    recent_paths: EnumProperty(
-        name="Recent Paths",
+    selected_path: EnumProperty(
+        name="Selected Paths",
         items=recent_path_items,
-        update=update_path_selection
-    )
+        update=update_path_selection)
 
     def sv_init(self, context):
-        self.outputs.new('SvVerticesSocket',  "Vertices")
-        self.outputs.new('SvQuaternionSocket',  "Quaternions")
+        self.outputs.new('SvVerticesSocket', "Vertices")
+        self.outputs.new('SvQuaternionSocket', "Quaternions")
+        self.outputs.new('SvStringsSocket', "Index")
 
     def draw_buttons(self, context, layout):
         row = layout.row()
-        row.prop(self, "recent_paths", text="")
+        row.prop(self, "selected_path", text="")
         row = layout.row()
-        row.prop(self, "file_path")
+        # row.prop(self, "file_path")
         col = row.column()
         load_op = col.operator("node.sv_somenode_file_importer", text="Load")
         load_op.idname = self.name
@@ -133,14 +140,28 @@ class SvPathLoadNode(bpy.types.Node, SverchCustomTreeNode):
 
         vertex_list, quaternion_list = load_path(self.file_path)
 
+        # if self.inputs["Quaternions"].is_linked:
+        #     input_Q = inputs["Quaternions"].sv_get()
+        #     quaternion_list = [Quaternion(q) for q in input_Q]
+
+        index = 0
+        for i, (k,v) in enumerate(recent_paths_dict.items()):
+            if self.selected_path == k:
+                index = i
+                break
+
         self.outputs['Vertices'].sv_set([vertex_list])
         self.outputs['Quaternions'].sv_set(quaternion_list)
+        self.outputs['Index'].sv_set([[index]])
 
 
-class SvSomeNodeFileImporterOp(bpy.types.Operator):
+class SvSomeNodeFileImporterOp(bpy.types.Operator, ImportHelper):
 
     bl_idname = "node.sv_somenode_file_importer"
     bl_label = "File Importer"
+
+    filename_ext = ".qmat"
+    files = CollectionProperty(type=bpy.types.PropertyGroup)
 
     filepath: StringProperty(
         name="File Path",
@@ -159,9 +180,16 @@ class SvSomeNodeFileImporterOp(bpy.types.Operator):
         return node
 
     def execute(self, context):
+        dirname = os.path.dirname(self.filepath)
+        filepaths = [os.path.join(dirname, f.name) for f in self.files]
+        print("selected files: ", filepaths)
+
         n = self.get_node()
-        print('executing self.filepath', self.filepath)
-        n.set_path(self.filepath)
+        for p in filepaths:
+            print("setting path: ", p)
+            n.set_path(p)
+        # print('executing self.filepath', self.filepath)
+        # n.set_path(self.filepath)
         # t = bpy.data.texts.load(self.filepath)
         # n.file_path = t.filepath
         # n.set_path(t.filepath, t.name)
