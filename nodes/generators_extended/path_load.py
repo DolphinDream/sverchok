@@ -17,42 +17,44 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
-from bpy.props import IntProperty, FloatProperty, BoolProperty, EnumProperty
+from bpy.props import IntProperty, FloatProperty, BoolProperty, EnumProperty, StringProperty
 
 from math import sin, cos, pi, sqrt, radians
 from random import random
 import time
 import mmap
+import os
 
 from mathutils import Quaternion
 
 from sverchok.node_tree import SverchCustomTreeNode
 from sverchok.data_structure import updateNode, match_long_repeat
 
+from pprint import pprint
+
+recent_paths_list = set()
+
 def load_path(filepath):
-    ## the QMAT file format is :
+    # the QMAT file format is :
     #
     # numEntries
     # x y z  x y z w
     # x y z  x y z w
     # ...
+
     # homeDir = "/home/marius/Downloads/"
-    homeDir = "/Users/atokirina/Downloads/"
-    filepath = homeDir + filepath
+    # homeDir = "/Users/atokirina/Downloads/"
+    # filepath = homeDir + filepath
     print("loading path: ", filepath)
 
+    verts, quats = [], []
+
     with open(filepath, 'rb') as file:
-        # check http://bugs.python.org/issue8046 to have mmap context
-        # manager fixed in python
         data = mmap.mmap(file.fileno(), 0, access=mmap.ACCESS_READ)
-        #yield data
-        #data.close()
 
-        verts, quats = [], []
-
-        # read the number of locations
+        # read the number of entries (locations + quaternions)
         nl = int(data.readline().rstrip())
-        # read the vertex coordinates for all vertices
+        # read the location + quaternion for all entries
         for i in range(nl):
             line = data.readline().rstrip()
             l = list(map(float, line.split()))
@@ -67,40 +69,116 @@ def load_path(filepath):
             # print("v=", v)
             # print("q=", q)
 
+        data.close()
+
         print("QMAT file has %d entries" % (nl))
 
-        return verts, quats
+    return verts, quats
 
 
 class SvPathLoadNode(bpy.types.Node, SverchCustomTreeNode):
-    ''' Load Path from file in vector (3) + quaternion (4) format '''
+    '''Path Loader'''
     bl_idname = 'SvPathLoadNode'
     bl_label = 'Load Path'
-    # sv_icon = 'SV_SPLIT_EDGES'
+    bl_description = 'Load Path from file in vector (3) + quaternion (4) format'
+
+    def set_path(self, filepath):
+        filename = os.path.basename(filepath)
+        print("setting filepath/filename: ", filepath, filename)
+        recent_paths_list.add(filepath)
+
+    def update_path(self, context):
+        print("Updating path: ", self.file_path)
+        recent_paths_list.add(self.file_path)
+        # load_path(self.file_path)
+
+    def update_path_selection(self, context):
+        print("Selected path: ", self.recent_paths)
+        updateNode(self, context)
+
+    def recent_path_items(self, context):
+        recentItems = [(k, k.title(), "", i) for i, k in enumerate(recent_paths_list)]
+
+        return recentItems
+
+    file_path: StringProperty(
+        name="Path File",
+        description="Path file name",
+        default="", update=update_path)
+
+    recent_paths: EnumProperty(
+        name="Recent Paths",
+        items=recent_path_items,
+        update=update_path_selection
+    )
 
     def sv_init(self, context):
-
         self.outputs.new('SvVerticesSocket',  "Vertices")
         self.outputs.new('SvQuaternionSocket',  "Quaternions")
 
     def draw_buttons(self, context, layout):
-        layout.prop(self, 'mirror')
+        row = layout.row()
+        row.prop(self, "recent_paths", text="")
+        row = layout.row()
+        row.prop(self, "file_path")
+        col = row.column()
+        load_op = col.operator("node.sv_somenode_file_importer", text="Load")
+        load_op.idname = self.name
+        load_op.idtree = self.id_data.name
 
     def process(self):
         # return if no outputs are connected
         if not any(s.is_linked for s in self.outputs):
             return
 
-        file_name = "path_size4_barrel_j2xr_distal.qmat"
-        vertex_list, quaternion_list = load_path(file_name)
+        vertex_list, quaternion_list = load_path(self.file_path)
 
         self.outputs['Vertices'].sv_set([vertex_list])
         self.outputs['Quaternions'].sv_set(quaternion_list)
 
 
+class SvSomeNodeFileImporterOp(bpy.types.Operator):
+
+    bl_idname = "node.sv_somenode_file_importer"
+    bl_label = "File Importer"
+
+    filepath: StringProperty(
+        name="File Path",
+        description="Filepath used for importing the file",
+        maxlen=1024, default="", subtype='FILE_PATH')
+
+    idname: StringProperty(
+        name='idname', description='name of parent node', default='')
+
+    idtree: StringProperty(
+        name='idtree', description='name of parent tree', default='')
+
+    def get_node(self):
+        node_group = bpy.data.node_groups[self.idtree]
+        node = node_group.nodes[self.idname]
+        return node
+
+    def execute(self, context):
+        n = self.get_node()
+        print('executing self.filepath', self.filepath)
+        n.set_path(self.filepath)
+        # t = bpy.data.texts.load(self.filepath)
+        # n.file_path = t.filepath
+        # n.set_path(t.filepath, t.name)
+        print("selected file path: ", n.file_path)
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        wm = context.window_manager
+        wm.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+
 def register():
     bpy.utils.register_class(SvPathLoadNode)
+    bpy.utils.register_class(SvSomeNodeFileImporterOp)
 
 
 def unregister():
+    bpy.utils.unregister_class(SvSomeNodeFileImporterOp)
     bpy.utils.unregister_class(SvPathLoadNode)
