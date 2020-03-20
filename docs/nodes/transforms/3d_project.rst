@@ -14,16 +14,17 @@ Inputs
 
 **Verts**
 
-+---------------+---------+---------+-------------------------------------------------+
-| Param         | Type    | Default | Description                                     |
-+===============+=========+=========+=================================================+
-| **Mode**      | Enum    | PLANE   | Projection mode                                 |
-|               |  PLANE  |         |  PLANE  : Perspective projection onto a plane   |
-|               |  SPHERE |         |  SPHERE : Perspective projection onto a sphere  |
-+---------------+---------+---------+-------------------------------------------------+
-| **Distance**  | float   | 2.0     |  Distance between the projection point and the  |
-|               |         |         |  projection surface.                            |
-+---------------+---------+---------+-------------------------------------------------+
++-----------------+--------------+---------+-------------------------------------------------+
+| Param           | Type         | Default | Description                                     |
++=================+==============+=========+=================================================+
+| **Projection**  | Enum         | PLANAR  | Projection mode                                 |
+|                 |  PLANAR      |         |  PLANE  : Perspective projection onto a plane   |
+|                 |  SPHERICAL   |         |  SPHERE : Perspective projection onto a sphere  |
+|                 |  CYLINDRICAL |         |  SPHERE : Perspective projection onto a sphere  |
++-----------------+--------------+---------+-------------------------------------------------+
+| **Distance**    | float        | 2.0     |  Distance between the projection point and the  |
+|                 |              |         |  projection surface.                            |
++-----------------+--------------+---------+-------------------------------------------------+
 
 Outputs
 =======

@@ -24,24 +24,16 @@ from sverchok.data_structure import updateNode, match_long_repeat
 from mathutils import Matrix
 from math import sqrt
 
-from sverchok.utils.profile import profile
-
 projection_type_items = [
     ("PLANAR",  "Planar",  "Project onto a plane", 0),
     ("SPHERICAL", "Spherical", "Project onto a sphere", 1),
     ("CYLINDRICAL", "Cylindrical", "Project onto a cylinder", 2)]
-
-
-projection_items = [
-    ("PERSPECTIVE",  "Perspective",  "Perspective projection", 0),
-    ("ORTHOGRAPHIC", "Orthographic", "Orthographic projection", 1)]
 
 idMat = [[tuple(v) for v in Matrix()]]  # identity matrix
 
 EPSILON = 1e-10
 
 
-@profile
 def projection_cylindrical(verts3D, m, d):
     """
     Project 3D verts onto a cylindrical surface
@@ -192,7 +184,6 @@ class Sv3DProjectNode(bpy.types.Node, SverchCustomTreeNode):
     def draw_buttons(self, context, layout):
         layout.prop(self, "projection_type", text="")
 
-    @profile
     def process(self):
         # return if no outputs are connected
         outputs = self.outputs
