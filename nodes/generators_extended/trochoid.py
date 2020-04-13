@@ -31,7 +31,7 @@ epsilon = 1e-5  # used to avoid division by zero
 typeItems = [("HYPO", "Hypo", ""), ("LINE", "Line", ""), ("EPI", "Epi", "")]
 
 # name : [ preset index, type, r1, r2, distance, phase1, phase2, turns, resolution ]
-trochoidPresets = {
+trochoid_presets = {
     " ":                    (0, "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0),
     # GENERIC LINE, EPI and HYPO TYPES
     "CYCLOID":              (10, "LINE", 1.0, 1.0, 1.0, 0.0, 0.0, 3.0, 200),
@@ -87,7 +87,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         updateNode(self, context)
 
     def preset_items(self, context):
-        return [(k, k.title(), "", "", s[0]) for k, s in sorted(trochoidPresets.items(), key=lambda k: k[1][0])]
+        return [(k, k.title(), "", "", s[0]) for k, s in sorted(trochoid_presets.items(), key=lambda k: k[1][0])]
 
     def update_presets(self, context):
         if self.presets == " ":
@@ -95,7 +95,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
 
         self.updating = True
 
-        tT, r1, r2, d, p1, p2, T, N = trochoidPresets[self.presets][1:]
+        tT, r1, r2, d, p1, p2, T, N = trochoid_presets[self.presets][1:]
         self.tType = tT
         self.radius1 = r1
         self.radius2 = r2
@@ -112,65 +112,65 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         self.updating = False
         updateNode(self, context)
 
-    presets = EnumProperty(
+    presets: EnumProperty(
         name="Presets", items=preset_items, update=update_presets)
 
-    tType = EnumProperty(
+    tType: EnumProperty(
         name="Type", items=typeItems,
         description="Type of the trochoid: HYPO, LINE & EPI",
         default="EPI", update=update_trochoid)
 
-    radius1 = FloatProperty(
+    radius1: FloatProperty(
         name='Radius1', description='Radius of the static circle',
         default=6.0, min=0.0, update=update_trochoid)
 
-    radius2 = FloatProperty(
+    radius2: FloatProperty(
         name='Radius2', description='Radius of the moving circle',
         default=1.0, min=0.0, update=update_trochoid)
 
-    distance = FloatProperty(
+    distance: FloatProperty(
         name='Distance',
         description='Distance from the drawing point to the center of the moving circle',
         default=4.0, min=0.0, update=update_trochoid)
 
-    phase1 = FloatProperty(
+    phase1: FloatProperty(
         name='Phase1', description='Starting angle for the static circle (radians)',
         default=0.0, update=update_trochoid)
 
-    phase2 = FloatProperty(
+    phase2: FloatProperty(
         name='Phase2', description='Starting angle for the moving circle (radians)',
         default=0.0, update=update_trochoid)
 
-    turns = FloatProperty(
+    turns: FloatProperty(
         name='Turns', description='Number of turns around the static circle',
         default=1.0, min=0.0, update=update_trochoid)
 
-    shift = FloatProperty(
+    shift: FloatProperty(
         name='Shift', description='Shift the starting point along the curve',
         default=0.0, min=0.0, max=1.0, update=update_trochoid)
 
-    resolution = IntProperty(
+    resolution: IntProperty(
         name='Resolution',
         description='Number of vertices in one full turn around the static circle',
         default=200, min=3, update=update_trochoid)
 
-    scale = FloatProperty(
+    scale: FloatProperty(
         name='Scale', description='Scale of the main parameters: radii and distance',
         default=1.0, min=0.0, update=update_trochoid)
 
-    swap = BoolProperty(
+    swap: BoolProperty(
         name='Swap', description='Swap radii and phases: R1<->R2 and P1<->P2',
         default=False, update=update_trochoid)
 
-    normalize = BoolProperty(
+    normalize: BoolProperty(
         name='Normalize', description='Scale the curve to fit within normalized size',
         default=False, update=update_normalize)
 
-    normalize_size = FloatProperty(
+    normalize_size: FloatProperty(
         name='Size', description='Normalized size of the curve',
         default=1.0, min=0.0, update=updateNode)
 
-    updating = BoolProperty(default=False)  # used for disabling update callback
+    updating: BoolProperty(default=False)  # used for disabling update callback
 
     def sv_init(self, context):
         self.width = 170
@@ -302,17 +302,17 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
                                         input_P1, input_P2, input_T,
                                         input_N, input_F, input_S])
 
-        vertList = []
-        edgeList = []
+        vert_list = []
+        edge_list = []
         for R1, R2, D, P1, P2, T, N, F, S in zip(*parameters):
             verts, edges = self.make_trochoid(R1, R2, D, P1, P2, T, N, F, S)
-            vertList.append(verts)
-            edgeList.append(edges)
+            vert_list.append(verts)
+            edge_list.append(edges)
 
         if outputs["Verts"].is_linked:
-            outputs["Verts"].sv_set(vertList)
+            outputs["Verts"].sv_set(vert_list)
         if outputs["Edges"].is_linked:
-            outputs["Edges"].sv_set(edgeList)
+            outputs["Edges"].sv_set(edge_list)
 
 
 def register():
