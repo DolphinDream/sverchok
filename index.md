@@ -52,6 +52,7 @@
     SvTriangleNode
     SvPentagonTilerNode
     SvSpiralNodeMK2
+    SvTrochoidNode
 
 ## Curves @ Primitives
     SvExLineCurveNode
