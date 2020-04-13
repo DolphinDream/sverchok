@@ -21,6 +21,7 @@ from bpy.props import BoolProperty, IntProperty, FloatProperty, EnumProperty
 
 from sverchok.node_tree import SverchCustomTreeNode
 from sverchok.data_structure import (match_long_repeat, updateNode, get_edge_list, get_edge_loop)
+from sverchok.utils.sv_transform_helper import AngleUnits, SvAngleHelper
 
 from math import sin, cos, pi, sqrt
 
@@ -28,7 +29,7 @@ from sverchok.utils.profile import profile
 
 epsilon = 1e-5  # used to avoid division by zero
 
-typeItems = [("HYPO", "Hypo", ""), ("LINE", "Line", ""), ("EPI", "Epi", "")]
+type_items = [("HYPO", "Hypo", ""), ("LINE", "Line", ""), ("EPI", "Epi", "")]
 
 # name : [ preset index, type, r1, r2, distance, phase1, phase2, turns, resolution ]
 trochoid_presets = {
@@ -66,7 +67,7 @@ trochoid_presets = {
 }
 
 
-class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
+class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
     """
     Triggers: Curve, Line, Cycloid
     Tooltip: Generate a trochoid curve (cycloids & epi / hypo trochoids)
@@ -74,6 +75,11 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
     bl_idname = 'SvTrochoidNode'
     bl_label = 'Trochoid'
     sv_icon = 'SV_TROCHOID'
+
+    def update_angles(self, context, au):
+        ''' Update all the angles to preserve their values in the new units '''
+        self.phase1 = self.phase1 * au
+        self.phase2 = self.phase2 * au
 
     def update_normalize(self, context):
         self.update_sockets()
@@ -110,13 +116,14 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         self.swap = False
 
         self.updating = False
+
         updateNode(self, context)
 
     presets: EnumProperty(
         name="Presets", items=preset_items, update=update_presets)
 
     tType: EnumProperty(
-        name="Type", items=typeItems,
+        name="Type", items=type_items,
         description="Type of the trochoid: HYPO, LINE & EPI",
         default="EPI", update=update_trochoid)
 
@@ -134,12 +141,12 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         default=4.0, min=0.0, update=update_trochoid)
 
     phase1: FloatProperty(
-        name='Phase1', description='Starting angle for the static circle (radians)',
-        default=0.0, update=update_trochoid)
+        name='Phase1', description='Starting angle for the static circle',
+        default=0.0, update=SvAngleHelper.update_angle)
 
     phase2: FloatProperty(
-        name='Phase2', description='Starting angle for the moving circle (radians)',
-        default=0.0, update=update_trochoid)
+        name='Phase2', description='Starting angle for the moving circle',
+        default=0.0, update=SvAngleHelper.update_angle)
 
     turns: FloatProperty(
         name='Turns', description='Number of turns around the static circle',
@@ -174,18 +181,18 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
 
     def sv_init(self, context):
         self.width = 170
-        self.inputs.new('StringsSocket', "R1").prop_name = "radius1"
-        self.inputs.new('StringsSocket', "R2",).prop_name = "radius2"
-        self.inputs.new('StringsSocket', "D").prop_name = "distance"
-        self.inputs.new('StringsSocket', "T").prop_name = "turns"
-        self.inputs.new('StringsSocket', "N").prop_name = "resolution"
-        self.inputs.new('StringsSocket', "P1").prop_name = "phase1"
-        self.inputs.new('StringsSocket', "P2").prop_name = "phase2"
-        self.inputs.new('StringsSocket', "F").prop_name = "shift"
-        self.inputs.new('StringsSocket', "S").prop_name = "scale"
+        self.inputs.new('SvStringsSocket', "R1").prop_name = "radius1"
+        self.inputs.new('SvStringsSocket', "R2",).prop_name = "radius2"
+        self.inputs.new('SvStringsSocket', "D").prop_name = "distance"
+        self.inputs.new('SvStringsSocket', "T").prop_name = "turns"
+        self.inputs.new('SvStringsSocket', "N").prop_name = "resolution"
+        self.inputs.new('SvStringsSocket', "P1").prop_name = "phase1"
+        self.inputs.new('SvStringsSocket', "P2").prop_name = "phase2"
+        self.inputs.new('SvStringsSocket', "F").prop_name = "shift"
+        self.inputs.new('SvStringsSocket', "S").prop_name = "scale"
 
-        self.outputs.new('VerticesSocket', "Verts")
-        self.outputs.new('StringsSocket', "Edges")
+        self.outputs.new('SvVerticesSocket', "Verts")
+        self.outputs.new('SvStringsSocket', "Edges")
 
         self.presets = "ROSETTE"
 
@@ -198,13 +205,16 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
         row.prop(self, "normalize", text="Norm", toggle=True)
         row.prop(self, "swap", toggle=True)
 
+    def draw_buttons_ext(self, context, layout):
+        self.draw_angle_units_buttons(context, layout)
+
     def update_sockets(self):
         if self.normalize:
             socket = self.inputs[-1]
-            socket.replace_socket("StringsSocket", "S").prop_name = "normalize_size"
+            socket.replace_socket("SvStringsSocket", "S").prop_name = "normalize_size"
         else:  # AC
             socket = self.inputs[-1]
-            socket.replace_socket("StringsSocket", "S").prop_name = "scale"
+            socket.replace_socket("SvStringsSocket", "S").prop_name = "scale"
 
     def make_trochoid(self, R1, R2, D, P1, P2, T, N, F, S):
         """
@@ -302,10 +312,13 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode):
                                         input_P1, input_P2, input_T,
                                         input_N, input_F, input_S])
 
+        # conversion factor from the current angle units to radians
+        au = self.radians_conversion_factor()
+
         vert_list = []
         edge_list = []
         for R1, R2, D, P1, P2, T, N, F, S in zip(*parameters):
-            verts, edges = self.make_trochoid(R1, R2, D, P1, P2, T, N, F, S)
+            verts, edges = self.make_trochoid(R1, R2, D, P1*au, P2*au, T, N, F, S)
             vert_list.append(verts)
             edge_list.append(edges)
 
