@@ -69,7 +69,7 @@ trochoid_presets = {
 
 class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
     """
-    Triggers: Curve, Line, Cycloid
+    Triggers: Cycloid, Spirograph
     Tooltip: Generate a trochoid curve (cycloids & epi / hypo trochoids)
     """
     bl_idname = 'SvTrochoidNode'
@@ -101,15 +101,15 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
 
         self.updating = True
 
-        tT, r1, r2, d, p1, p2, T, N = trochoid_presets[self.presets][1:]
-        self.tType = tT
+        tt, r1, r2, d, p1, p2, t, n = trochoid_presets[self.presets][1:]
+        self.trochoid_type = tt
         self.radius1 = r1
         self.radius2 = r2
         self.distance = d
         self.phase1 = p1
         self.phase2 = p2
-        self.turns = T
-        self.resolution = N
+        self.turns = t
+        self.resolution = n
         self.scale = 1.0
         self.normalize_size = 1.0
         self.normalize = True
@@ -122,7 +122,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
     presets: EnumProperty(
         name="Presets", items=preset_items, update=update_presets)
 
-    tType: EnumProperty(
+    trochoid_type: EnumProperty(
         name="Type", items=type_items,
         description="Type of the trochoid: HYPO, LINE & EPI",
         default="EPI", update=update_trochoid)
@@ -200,7 +200,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
         layout.prop(self, 'presets', text="")
         col = layout.column(align=True)
         row = col.row(align=True)
-        row.prop(self, "tType", expand=True)
+        row.prop(self, "trochoid_type", expand=True)
         row = col.row(align=True)
         row.prop(self, "normalize", text="Norm", toggle=True)
         row.prop(self, "swap", toggle=True)
@@ -216,67 +216,72 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
             socket = self.inputs[-1]
             socket.replace_socket("SvStringsSocket", "S").prop_name = "scale"
 
-    def make_trochoid(self, R1, R2, D, P1, P2, T, N, F, S):
+    def make_trochoid(self, r1, r2, d, p1, p2, t, n, f, s):
         """
-        R1 : radius1    = radius of the static circle
-        R2 : radius2    = radius of the moving circle
-        D  : distance   = drawing point distance to the center of the moving circle
-        P1 : phase1     = starting angle for the static circle
-        P2 : phase2     = starting angle for the moving circle
-        T  : turns      = number of turns around the static circle
-        N  : resolution = number of vertices in one full turn around the static circle
-        F  : shift      = shift the starting point along the curve (percentage)
-        S  : scale      = scale the main parameters (radii & distance)
+        r1 : radius1    = radius of the static circle
+        r2 : radius2    = radius of the moving circle
+        d  : distance   = drawing point distance to the center of the moving circle
+        p1 : phase1     = starting angle for the static circle
+        p2 : phase2     = starting angle for the moving circle
+        t  : turns      = number of turns around the static circle
+        n  : resolution = number of vertices in one full turn around the static circle
+        f  : shift      = shift the starting point along the curve (percentage)
+        s  : scale      = scale the main parameters (radii & distance)
+
+        See documentation here for details:
+          https://en.wikipedia.org/wiki/Trochoid
+          https://en.wikipedia.org/wiki/Epitrochoid
+          https://en.wikipedia.org/wiki/Hypotrochoid
         """
         verts = []
         edges = []
 
-        a, b, p1, p2 = [R2, R1, P2, P1] if self.swap else [R1, R2, P1, P2]
+        a, b, p1, p2 = [r2, r1, p2, p1] if self.swap else [r1, r2, p1, p2]
 
         if self.normalize:  # normalize ? => set scale to fit the normalize size
-            if self.tType == "EPI":
-                S = S / (abs(a + b) + D + epsilon)
-            elif self.tType == "HYPO":
-                S = S / (abs(a - b) + D + epsilon)
+            if self.trochoid_type == "EPI":
+                s = s / (abs(a + b) + d + epsilon)
+            elif self.trochoid_type == "HYPO":
+                s = s / (abs(a - b) + d + epsilon)
             else:  # LINE
-                S = S / (2 * pi * a + D + epsilon)
+                s = s / (2 * pi * a + d + epsilon)
 
-        a = a * S
-        b = max(b * S, epsilon)  # safeguard to avoid division by zero
-        d = D * S
+        a = a * s
+        b = max(b * s, epsilon)  # safeguard to avoid division by zero
+        d = d * s
 
-        if self.tType == "EPI":
-            R = a + b  # outer radius
-            Rb = R / b  # outer "gear ratio"
-            fx = lambda t: R * cos(t + p1) - d * cos(Rb * t + p2)
-            fy = lambda t: R * sin(t + p1) - d * sin(Rb * t + p2)
-        elif self.tType == "HYPO":
+        if self.trochoid_type == "EPI":
+            r = a + b  # outer radius
+            g = r / b  # outer "gear ratio"
+            fx = lambda t: r * cos(t + p1) - d * cos(g * t + p2)
+            fy = lambda t: r * sin(t + p1) - d * sin(g * t + p2)
+        elif self.trochoid_type == "HYPO":
             r = a - b  # inner radius
-            rb = r / b  # inner "gear ratio"
-            fx = lambda t: r * cos(t + p1) + d * cos(rb * t + p2)
-            fy = lambda t: r * sin(t + p1) - d * sin(rb * t + p2)
+            g = r / b  # inner "gear ratio"
+            fx = lambda t: r * cos(t + p1) + d * cos(g * t + p2)
+            fy = lambda t: r * sin(t + p1) - d * sin(g * t + p2)
         else:  # LINE
             fx = lambda t: b * t - d * sin(t + p1)
             fy = lambda t: b - d * cos(t + p1)
 
         v = lambda t: [fx(t), fy(t), 0]
 
-        N = max(3, int(T * N))  # total number of points in all turns
-        dT = 2 * pi * T / N
-        shift = 2 * pi * F * T
+        n = max(3, int(t * n))  # total number of points in all turns
+        dt = 2 * pi * t / n # turn increment
+        shift = 2 * pi * f * t
 
-        verts = [v(shift + n * dT) for n in range(N + 1)]
+        verts = [v(shift + i * dt) for i in range(n + 1)]
 
         # close the curve if the first & last points overlap (remove duplicate)
-        vF, vL = [verts[0], verts[N]]
-        dx, dy, dz = [vL[0] - vF[0], vL[1] - vF[1], vL[2] - vF[2]]
-        d = sqrt(dx * dx + dy * dy + dz * dz)
+        vf, vl = [verts[0], verts[n]]
+        dx, dy, dz = [vl[0] - vf[0], vl[1] - vf[1], vl[2] - vf[2]]
+        delta = sqrt(dx * dx + dy * dy + dz * dz)
 
-        if d < epsilon:
+        if delta < epsilon:
             del verts[-1]
-            edges = get_edge_loop(N)
+            edges = get_edge_loop(n)
         else:
-            edges = get_edge_list(N)
+            edges = get_edge_list(n)
 
         return verts, edges
 
@@ -289,36 +294,35 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
 
         # input values lists (single or multi value)
         inputs = self.inputs
-        input_R1 = inputs["R1"].sv_get()[0]  # radius R1
-        input_R2 = inputs["R2"].sv_get()[0]  # radius R2
-        input_D = inputs["D"].sv_get()[0]    # distance
-        input_P1 = inputs["P1"].sv_get()[0]  # phase P1
-        input_P2 = inputs["P2"].sv_get()[0]  # phase P2
-        input_T = inputs["T"].sv_get()[0]    # turns
-        input_N = inputs["N"].sv_get()[0]    # resolution
-        input_S = inputs["S"].sv_get()[0]    # scale
-        input_F = inputs["F"].sv_get()[0]    # shift
+        input_r1 = inputs["R1"].sv_get()[0]  # radius of static circle
+        input_r2 = inputs["R2"].sv_get()[0]  # radius of moving circle
+        input_d = inputs["D"].sv_get()[0]    # distance
+        input_p1 = inputs["P1"].sv_get()[0]  # phase P1
+        input_p2 = inputs["P2"].sv_get()[0]  # phase P2
+        input_t = inputs["T"].sv_get()[0]    # turns
+        input_n = inputs["N"].sv_get()[0]    # resolution
+        input_s = inputs["S"].sv_get()[0]    # scale
+        input_f = inputs["F"].sv_get()[0]    # shift
 
         # sanitize the inputs
-        input_R1 = list(map(lambda x: max(0.0, x), input_R1))
-        input_R2 = list(map(lambda x: max(0.0, x), input_R2))
-        input_D = list(map(lambda x: max(0.0, x), input_D))
-        input_T = list(map(lambda x: max(0.0, x), input_T))
-        input_N = list(map(lambda x: max(3, int(x)), input_N))
-        input_S = list(map(lambda x: max(0.0, x), input_S))
-        # input_F = list(map(lambda x: max(0.0, min(1.0, x)), input_F))
+        input_r1 = list(map(lambda x: max(0.0, x), input_r1))
+        input_r2 = list(map(lambda x: max(0.0, x), input_r2))
+        input_d = list(map(lambda x: max(0.0, x), input_d))
+        input_t = list(map(lambda x: max(0.0, x), input_t))
+        input_n = list(map(lambda x: max(3, int(x)), input_n))
+        input_s = list(map(lambda x: max(0.0, x), input_s))
 
-        parameters = match_long_repeat([input_R1, input_R2, input_D,
-                                        input_P1, input_P2, input_T,
-                                        input_N, input_F, input_S])
+        parameters = match_long_repeat([input_r1, input_r2, input_d,
+                                        input_p1, input_p2, input_t,
+                                        input_n, input_f, input_s])
 
         # conversion factor from the current angle units to radians
         au = self.radians_conversion_factor()
 
         vert_list = []
         edge_list = []
-        for R1, R2, D, P1, P2, T, N, F, S in zip(*parameters):
-            verts, edges = self.make_trochoid(R1, R2, D, P1*au, P2*au, T, N, F, S)
+        for r1, r2, d, p1, p2, t, n, f, s in zip(*parameters):
+            verts, edges = self.make_trochoid(r1, r2, d, p1 * au, p2 * au, t, n, f, s)
             vert_list.append(verts)
             edge_list.append(edges)
 

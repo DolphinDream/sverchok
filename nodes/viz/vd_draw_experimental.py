@@ -56,6 +56,62 @@ default_fragment_shader = '''
     }
 '''
 
+vertex_shader = '''
+uniform mat4 viewProjectionMatrix;
+
+in vec3 position;
+
+void main()
+{
+  gl_Position = viewProjectionMatrix * vec4(position, 1.0f);
+}
+'''
+
+fragment_shader = '''
+uniform vec4 color;
+out vec4 outColor;
+
+void main()
+{
+  outColor = color;
+}
+'''
+
+geometry_shader = '''
+layout(lines) in;
+layout(triangle_strip, max_vertices=4) out;
+
+uniform float lineWidth=10;
+
+void main()
+{
+  vec3 start = gl_in[0].gl_Position.xyz;
+  vec3 end = gl_in[1].gl_Position.xyz;
+
+  vec3 line = normalize(end-start);
+  vec3 lhs = cross(line, vec3(0.0, 0.0, 1.0));
+
+  float line_width_scale = 0.07;
+  float line_width = lineWidth * line_width_scale;
+  vec3 dL = + lhs * 0.5 * line_width;
+  vec3 dR = - lhs * 0.5 * line_width;
+
+  gl_Position = gl_in[0].gl_Position + vec4(dL, 0);
+  EmitVertex();
+
+  gl_Position = gl_in[0].gl_Position + vec4(dR, 0);
+  EmitVertex();
+
+  gl_Position = gl_in[1].gl_Position + vec4(dL, 0);
+  EmitVertex();
+
+  gl_Position = gl_in[1].gl_Position + vec4(dR, 0);
+  EmitVertex();
+
+  EndPrimitive();
+}
+'''
+
 def edges_from_faces(indices):
     """ we don't want repeat edges, ever.."""
     out = set()
@@ -142,6 +198,9 @@ def draw_uniform(GL_KIND, coords, indices, color, width=1, dashed_data=None):
 
     params = dict(indices=indices) if indices else {}
 
+    bgl.glEnable(bgl.GL_BLEND)
+    # bgl.glEnable(bgl.GL_LINE_SMOOTH)
+
     if GL_KIND == 'LINES' and dashed_data:
 
         shader = dashed_data.dashed_shader
@@ -154,8 +213,25 @@ def draw_uniform(GL_KIND, coords, indices, color, width=1, dashed_data=None):
         shader.uniform_float("m_color", dashed_data.m_color)
         batch.draw(shader)
 
-    else:
+    elif GL_KIND == 'LINES' and True:
+    # elif GL_KIND == 'LINES' and False:
+        shader = gpu.types.GPUShader(vertex_shader, fragment_shader, geocode=geometry_shader)
 
+        matrix = bpy.context.region_data.perspective_matrix
+        bgl.glEnable(bgl.GL_BLEND)
+        bgl.glEnable(bgl.GL_LINE_SMOOTH)
+        bgl.glEnable(bgl.GL_POLYGON_SMOOTH)
+
+        shader.bind()
+        shader.uniform_float("viewProjectionMatrix", matrix)
+        shader.uniform_float("lineWidth", width)
+        batch = batch_for_shader(shader, GL_KIND, {"position" : coords}, **params)
+        shader.bind()
+        shader.uniform_float("color", color)
+
+        batch.draw(shader)
+
+    else:
         shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
         batch = batch_for_shader(shader, GL_KIND, {"pos" : coords}, **params)
         shader.bind()

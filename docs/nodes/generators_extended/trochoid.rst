@@ -98,7 +98,7 @@ The inputs are "sanitized" to restrict their values to valid domains:
 +----------------+--------+---------+--------------------------------------------------------------------+
 | **Resolution** | Int    | 200     | Number of vertices in a complete turn around the static circle     |
 +----------------+--------+---------+--------------------------------------------------------------------+
-| **Scale**      | Float  | 1.0     | Scale the main parameters (radii & distance) [2]                     |
+| **Scale**      | Float  | 1.0     | Scale the main parameters (radii & distance) [2]                   |
 +----------------+--------+---------+--------------------------------------------------------------------+
 | **Size**       | Float  | 1.0     | Normalized size of the entire curve [2]                            |
 +----------------+--------+---------+--------------------------------------------------------------------+
