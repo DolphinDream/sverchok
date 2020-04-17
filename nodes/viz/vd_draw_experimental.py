@@ -213,8 +213,8 @@ def draw_uniform(GL_KIND, coords, indices, color, width=1, dashed_data=None):
         shader.uniform_float("m_color", dashed_data.m_color)
         batch.draw(shader)
 
-    elif GL_KIND == 'LINES' and True:
-    # elif GL_KIND == 'LINES' and False:
+    # elif GL_KIND == 'LINES' and True:
+    elif GL_KIND == 'LINES' and False:
         shader = gpu.types.GPUShader(vertex_shader, fragment_shader, geocode=geometry_shader)
 
         matrix = bpy.context.region_data.perspective_matrix

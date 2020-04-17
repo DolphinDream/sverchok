@@ -23,86 +23,89 @@ from math import sin, cos, pi, radians
 
 from sverchok.node_tree import SverchCustomTreeNode
 from sverchok.data_structure import updateNode, match_long_repeat
+from sverchok.utils.sv_transform_helper import AngleUnits, SvAngleHelper
 
 
-def ring_verts(Separate, R, r, N1, N2, p):
+def ring_verts(Separate, u, r1, r2, N1, N2, p):
     '''
         Separate : separate vertices into radial section lists
-        R   : major radius
-        r   : minor radius
+        r1  : major radius
+        r2  : minor radius
         N1  : major sections - number of RADIAL sections
         N2  : minor sections - number of CIRCULAR sections
         p   : radial section phase
     '''
-    listVerts = []
+    list_verts = []
 
     # angle increments (cached outside of the loop for performance)
-    da = 2 * pi / N1
+    da = 2 * pi / (N1*(u+1))
 
-    for n1 in range(N1):
+    for n1 in range(N1*(u+1)):
         theta = n1 * da + p     # radial section angle
         sin_theta = sin(theta)  # caching
         cos_theta = cos(theta)  # caching
 
-        loopVerts = []
+        loop_verts = []
         s = 2 / (N2 - 1)  # caching
         for n2 in range(N2):
-            rr = R + (n2 * s - 1) * r
-            x = rr * cos_theta
-            y = rr * sin_theta
+            r = r1 + (n2 * s - 1) * r2
+            x = r * cos_theta
+            y = r * sin_theta
 
             # append vertex to loop
-            loopVerts.append([x, y, 0.0])
+            loop_verts.append([x, y, 0.0])
 
         if Separate:
-            listVerts.append(loopVerts)
+            list_verts.append(loop_verts)
         else:
-            listVerts.extend(loopVerts)
+            list_verts.extend(loop_verts)
 
-    return listVerts
+    return list_verts
 
 
-def ring_edges(N1, N2):
+def ring_edges(N1, N2, u):
     '''
         N1 : major sections - number of RADIAL sections
         N2 : minor sections - number of CIRCULAR sections
     '''
-    listEdges = []
+    list_edges = []
 
     # radial EDGES
     for n1 in range(N1):
         for n2 in range(N2 - 1):
-            listEdges.append([N2 * n1 + n2, N2 * n1 + n2 + 1])
+            list_edges.append([N2 * n1*(u+1) + n2, N2 * n1*(u+1) + n2 + 1])
 
     # circular EDGES
-    for n1 in range(N1 - 1):
+    for n1 in range(N1*(u+1) - 1):
         for n2 in range(N2):
-            listEdges.append([N2 * n1 + n2, N2 * (n1 + 1) + n2])
+            list_edges.append([N2 * n1 + n2, N2 * (n1 + 1) + n2])
     for n2 in range(N2):
-        listEdges.append([N2 * (N1 - 1) + n2, n2])
+        list_edges.append([N2 * (N1*(u+1) - 1) + n2, n2])
 
-    return listEdges
+    return list_edges
 
 
-def ring_polygons(N1, N2):
+def ring_polygons(N1, N2, u):
     '''
         N1 : major sections - number of RADIAL sections
         N2 : minor sections - number of CIRCULAR sections
     '''
-    listPolys = []
+    list_polys = []
     for n1 in range(N1 - 1):
         for n2 in range(N2 - 1):
-            listPolys.append([N2 * n1 + n2, N2 * (n1 + 1) + n2, N2 * (n1 + 1) + n2 + 1, N2 * n1 + n2 + 1])
+            list_polys.append([N2 * n1 + n2, N2 * (n1 + 1) + n2, N2 * (n1 + 1) + n2 + 1, N2 * n1 + n2 + 1])
 
     for n2 in range(N2 - 1):
-        listPolys.append([N2 * (N1 - 1) + n2, n2, n2 + 1, N2 * (N1 - 1) + n2 + 1])
+        list_polys.append([N2 * (N1 - 1) + n2, n2, n2 + 1, N2 * (N1 - 1) + n2 + 1])
 
-    return listPolys
+    return list_polys
 
 
-class SvRingNode(bpy.types.Node, SverchCustomTreeNode):
-
-    ''' Ring '''
+class SvRingNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
+    """
+    Triggers: Ring
+    Tooltip: Generate ring meshes
+    """
     bl_idname = 'SvRingNode'
     bl_label = 'Ring'
     bl_icon = 'PROP_CON'
@@ -112,58 +115,62 @@ class SvRingNode(bpy.types.Node, SverchCustomTreeNode):
     def update_mode(self, context):
         # switch radii input sockets (R,r) <=> (eR,iR)
         if self.mode == 'EXT_INT':
-            self.inputs['R'].prop_name = "ring_eR"
-            self.inputs['r'].prop_name = "ring_iR"
+            self.inputs['R'].prop_name = "ring_er"
+            self.inputs['r'].prop_name = "ring_ir"
         else:
-            self.inputs['R'].prop_name = "ring_R"
-            self.inputs['r'].prop_name = "ring_r"
+            self.inputs['R'].prop_name = "ring_r1"
+            self.inputs['r'].prop_name = "ring_r2"
         updateNode(self, context)
 
     # keep the equivalent radii pair in sync (eR,iR) => (R,r)
     def external_internal_radii_changed(self, context):
         if self.mode == "EXT_INT":
-            self.ring_R = (self.ring_eR + self.ring_iR) * 0.5
-            self.ring_r = (self.ring_eR - self.ring_iR) * 0.5
+            self.ring_r1 = (self.ring_er + self.ring_ir) * 0.5
+            self.ring_r2 = (self.ring_er - self.ring_ir) * 0.5
             updateNode(self, context)
 
     # keep the equivalent radii pair in sync (R,r) => (eR,iR)
     def major_minor_radii_changed(self, context):
         if self.mode == "MAJOR_MINOR":
-            self.ring_eR = self.ring_R + self.ring_r
-            self.ring_iR = self.ring_R - self.ring_r
+            self.ring_er = self.ring_r1 + self.ring_r2
+            self.ring_ir = self.ring_r1 - self.ring_r2
             updateNode(self, context)
+
+    def update_angles(self, context, au):
+        ''' Update all the angles to preserve their values in the new units '''
+        self.ring_rP = self.ring_rP * au
 
     # Ring DIMENSIONS options
     mode: EnumProperty(
         name="Ring Dimensions",
-        items=(("MAJOR_MINOR", "Major/Minor",
+        items=(("MAJOR_MINOR", "R : r",
                 "Use the Major/Minor radii for ring dimensions."),
-               ("EXT_INT", "Exterior/Interior",
+               ("EXT_INT", "eR : iR",
                 "Use the Exterior/Interior radii for ring dimensions.")),
         update=update_mode)
 
-    ring_R: FloatProperty(
+    ring_r1: FloatProperty(
         name="Major Radius",
         description="Radius from the ring center to the middle of ring band",
-        default=1.0, min=0.00, max=100.0,
+        default=1.0, min=0.0,
         update=major_minor_radii_changed)
 
-    ring_r: FloatProperty(
+    ring_r2: FloatProperty(
         name="Minor Radius",
         description="Width of the ring band",
-        default=.25, min=0.00, max=100.0,
+        default=.25, min=0.0,
         update=major_minor_radii_changed)
 
-    ring_iR: FloatProperty(
+    ring_ir: FloatProperty(
         name="Interior Radius",
         description="Interior radius of the ring (closest to the ring center)",
-        default=.75, min=0.00, max=100.0,
+        default=.75, min=0.0,
         update=external_internal_radii_changed)
 
-    ring_eR: FloatProperty(
+    ring_er: FloatProperty(
         name="Exterior Radius",
         description="Exterior radius of the ring (farthest from the ring center)",
-        default=1.25, min=0.00, max=100.0,
+        default=1.25, min=0.0,
         update=external_internal_radii_changed)
 
     # Ring RESOLUTION options
@@ -183,6 +190,11 @@ class SvRingNode(bpy.types.Node, SverchCustomTreeNode):
         default=0.0, min=0.0, soft_min=0.0,
         update=updateNode)
 
+    ring_u: IntProperty(
+        name="Subdivide Circular", description="Number of subdivisions in the circular sections",
+        default=0, min=0, soft_min=0,
+        update=updateNode)
+
     # OTHER options
     Separate: BoolProperty(
         name='Separate', description='Separate UV coords',
@@ -190,9 +202,9 @@ class SvRingNode(bpy.types.Node, SverchCustomTreeNode):
         update=updateNode)
 
     def sv_init(self, context):
-        self.width = 170
-        self.inputs.new('SvStringsSocket', "R").prop_name = 'ring_R'
-        self.inputs.new('SvStringsSocket', "r").prop_name = 'ring_r'
+        self.width = 160
+        self.inputs.new('SvStringsSocket', "R").prop_name = 'ring_r1'
+        self.inputs.new('SvStringsSocket', "r").prop_name = 'ring_r2'
         self.inputs.new('SvStringsSocket', "n1").prop_name = 'ring_n1'
         self.inputs.new('SvStringsSocket', "n2").prop_name = 'ring_n2'
         self.inputs.new('SvStringsSocket', "rP").prop_name = 'ring_rP'
@@ -205,6 +217,10 @@ class SvRingNode(bpy.types.Node, SverchCustomTreeNode):
         layout.prop(self, "Separate", text="Separate")
         layout.prop(self, 'mode', expand=True)
 
+    def draw_buttons_ext(self, context, layout):
+        self.draw_angle_units_buttons(context, layout)
+        layout.prop(self, 'ring_u')
+
     def process(self):
         # return if no outputs are connected
         if not any(s.is_linked for s in self.outputs):
@@ -212,9 +228,9 @@ class SvRingNode(bpy.types.Node, SverchCustomTreeNode):
 
         # input values lists (single or multi value)
         # list of MAJOR or EXTERIOR radii
-        input_RR = self.inputs["R"].sv_get()[0]
+        input_r1 = self.inputs["R"].sv_get()[0]
         # list of MINOR or INTERIOR radii
-        input_rr = self.inputs["r"].sv_get()[0]
+        input_r2 = self.inputs["r"].sv_get()[0]
         # list of number of MAJOR sections : RADIAL
         input_n1 = self.inputs["n1"].sv_get()[0]
         # list of number of MINOR sections : CIRCULAR
@@ -223,33 +239,34 @@ class SvRingNode(bpy.types.Node, SverchCustomTreeNode):
         input_rp = self.inputs["rP"].sv_get()[0]
 
         # sanitize the input values
-        input_RR = list(map(lambda x: max(0, x), input_RR))
-        input_rr = list(map(lambda x: max(0, x), input_rr))
+        input_r1 = list(map(lambda x: max(0, x), input_r1))
+        input_r2 = list(map(lambda x: max(0, x), input_r2))
         input_n1 = list(map(lambda x: max(3, int(x)), input_n1))
         input_n2 = list(map(lambda x: max(2, int(x)), input_n2))
-        input_rp = list(map(lambda x: radians(x), input_rp))
+
+        # conversion factor from the current angle units to radians
+        au = self.radians_conversion_factor()
+
+        input_rp = list(map(lambda x: x * au, input_rp))
 
         # convert input radii values to MAJOR/MINOR, based on selected mode
         if self.mode == 'EXT_INT':
             # convert radii from EXTERIOR/INTERIOR to MAJOR/MINOR
             # (extend radii lists to a matching length before conversion)
-            input_RR, input_rr = match_long_repeat([input_RR, input_rr])
-            input_R = list(map(lambda x, y: (x + y) * 0.5, input_RR, input_rr))
-            input_r = list(map(lambda x, y: (x - y) * 0.5, input_RR, input_rr))
-        else:  # values already given as MAJOR/MINOR radii
-            input_R = input_RR
-            input_r = input_rr
+            input_a, input_b = match_long_repeat([input_r1, input_r2])
+            input_r1 = list(map(lambda a, b: (a + b) * 0.5, input_a, input_b))
+            input_r2 = list(map(lambda a, b: (a - b) * 0.5, input_a, input_b))
 
-        params = match_long_repeat([input_R, input_r, input_n1, input_n2, input_rp])
+        params = match_long_repeat([input_r1, input_r2, input_n1, input_n2, input_rp])
 
         V, E, P = self.outputs[:]
         for s, f in [(V, ring_verts), (E, ring_edges), (P, ring_polygons)]:
             if not s.is_linked:
                 continue
             if s == V:
-                s.sv_set([f(self.Separate, *args) for args in zip(*params)])
+                s.sv_set([f(self.Separate, self.ring_u, *args) for args in zip(*params)])
             else:
-                s.sv_set([f(n1, n2) for _, _, n1, n2, _ in zip(*params)])
+                s.sv_set([f(n1, n2, self.ring_u) for _, _, n1, n2, _ in zip(*params)])
 
 
 def register():
