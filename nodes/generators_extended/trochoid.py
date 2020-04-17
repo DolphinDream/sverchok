@@ -19,7 +19,7 @@
 import bpy
 from bpy.props import BoolProperty, IntProperty, FloatProperty, EnumProperty
 
-from sverchok.node_tree import SverchCustomTreeNode
+from sverchok.node_tree import SverchCustomTreeNode, throttled
 from sverchok.data_structure import (match_long_repeat, updateNode, get_edge_list, get_edge_loop)
 from sverchok.utils.sv_transform_helper import AngleUnits, SvAngleHelper
 
@@ -82,9 +82,10 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
         self.phase1 = self.phase1 * au
         self.phase2 = self.phase2 * au
 
+    @throttled
     def update_normalize(self, context):
         self.update_sockets()
-        updateNode(self, context)
+        # updateNode(self, context)
 
     def update_trochoid(self, context):
         if self.updating:
@@ -194,8 +195,12 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
 
         self.outputs.new('SvVerticesSocket', "Verts")
         self.outputs.new('SvStringsSocket', "Edges")
+
         self.outputs.new('SvMatrixSocket', "M1")
         self.outputs.new('SvMatrixSocket', "M2")
+
+        self.outputs.new('SvStringsSocket', "Max R")
+        self.outputs.new('SvStringsSocket', "Min R")
 
         self.presets = "ROSETTE"
 
@@ -218,6 +223,27 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
         else:  # AC
             socket = self.inputs[-1]
             socket.replace_socket("SvStringsSocket", "S").prop_name = "scale"
+
+    def grid_range(self, r1, r2, d, s):
+
+        a, b = [r2, r1] if self.swap else [r1, r2]
+
+        if self.normalize:  # normalize ? => set scale to fit the normalize size
+            if self.trochoid_type == "EPI":
+                s = s / (abs(a + b) + d + epsilon)
+            elif self.trochoid_type == "HYPO":
+                s = s / (abs(a - b) + d + epsilon)
+            else:  # LINE
+                s = s / (2 * pi * a + d + epsilon)
+
+        a = a * s
+        b = b * s
+        d = d * s
+
+        external_radius = a + b + d
+        internal_radius = min( max(0, abs(a - b - d)), abs(a + b - d) )
+
+        return external_radius, internal_radius
 
     def circle_transforms(self, r1, r2, d, p1, p2, t, n, s):
 
@@ -370,13 +396,20 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
         edge_list = []
         m1_list = []
         m2_list = []
+        max_r_list = []
+        min_r_list = []
         for r1, r2, d, p1, p2, t, n, f, s in zip(*parameters):
             verts, edges = self.make_trochoid(r1, r2, d, p1 * au, p2 * au, t, n, f, s)
             vert_list.append(verts)
             edge_list.append(edges)
+
             m1, m2 = self.circle_transforms(r1, r2, d, p1 * au, p2 * au, t, n, s)
             m1_list.append(m1)
             m2_list.append(m2)
+
+            max_r, min_r = self.grid_range(r1, r2, d, s)
+            max_r_list.append(max_r)
+            min_r_list.append(min_r)
 
         if outputs["Verts"].is_linked:
             outputs["Verts"].sv_set(vert_list)
@@ -387,6 +420,11 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
             outputs["M1"].sv_set(m1_list)
         if outputs["M2"].is_linked:
             outputs["M2"].sv_set(m2_list)
+
+        if outputs["Max R"].is_linked:
+            outputs["Max R"].sv_set([max_r_list])
+        if outputs["Min R"].is_linked:
+            outputs["Min R"].sv_set([min_r_list])
 
 def register():
     bpy.utils.register_class(SvTrochoidNode)
