@@ -23,7 +23,7 @@ from sverchok.node_tree import SverchCustomTreeNode, throttled
 from sverchok.data_structure import (match_long_repeat, updateNode, get_edge_list, get_edge_loop)
 from sverchok.utils.sv_transform_helper import AngleUnits, SvAngleHelper
 
-from math import sin, cos, pi, sqrt
+from math import sin, cos, pi, sqrt, gcd
 from mathutils import Quaternion, Matrix, Euler
 
 from sverchok.utils.profile import profile
@@ -179,6 +179,10 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
         name='Size', description='Normalized size of the curve',
         default=1.0, min=0.0, update=updateNode)
 
+    turn_strech: BoolProperty(
+        name='Stretch Turn', description='Stretch the turns in order to close trochoid path',
+        default=False, update=updateNode)
+
     updating: BoolProperty(default=False)  # used for disabling update callback
 
     def sv_init(self, context):
@@ -196,8 +200,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
         self.outputs.new('SvVerticesSocket', "Verts")
         self.outputs.new('SvStringsSocket', "Edges")
 
-        self.outputs.new('SvMatrixSocket', "M1")
-        self.outputs.new('SvMatrixSocket', "M2")
+        self.outputs.new('SvMatrixSocket', "M")
 
         self.outputs.new('SvStringsSocket', "Max R")
         self.outputs.new('SvStringsSocket', "Min R")
@@ -215,12 +218,13 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
 
     def draw_buttons_ext(self, context, layout):
         self.draw_angle_units_buttons(context, layout)
+        layout.prop(self, "turn_strech")
 
     def update_sockets(self):
         if self.normalize:
             socket = self.inputs[-1]
             socket.replace_socket("SvStringsSocket", "S").prop_name = "normalize_size"
-        else:  # AC
+        else:
             socket = self.inputs[-1]
             socket.replace_socket("SvStringsSocket", "S").prop_name = "scale"
 
@@ -241,13 +245,16 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
         d = d * s
 
         external_radius = a + b + d
-        internal_radius = min( max(0, abs(a - b - d)), abs(a + b - d) )
+        internal_radius = min( abs(abs(a - b) - d), abs(a + b - d) )
 
         return external_radius, internal_radius
 
-    def circle_transforms(self, r1, r2, d, p1, p2, t, n, s):
+    def circle_transform(self, r1, r2, d, p1, p2, t, n, s):
 
         a, b, p1, p2 = [r2, r1, p2, p1] if self.swap else [r1, r2, p1, p2]
+
+        ts = b / gcd(a, b)
+        t = t * ts if self.turn_strech else t
 
         if self.normalize:  # normalize ? => set scale to fit the normalize size
             if self.trochoid_type == "EPI":
@@ -261,33 +268,46 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
         b = max(b * s, epsilon)  # safeguard to avoid division by zero
         d = d * s
 
-        ro = a + b  # outer radius
-        ri = a - b  # inner radius
-        go = ro / b  # outer "gear ratio"
-        gi = ri / b  # inner "gear ratio"
+        if self.trochoid_type == "EPI":
+            sign = +1.0
+        elif self.trochoid_type == "HYPO":
+            sign = -1.0
+        else: # LINE
+            t = 2 * pi * t
+
+            m_t = Matrix().Identity(4)
+
+            # translation
+            m_t[0][3] = b * t
+            m_t[1][3] = b
+            m_t[2][3] = 0
+
+            # rotation
+            m_r = Euler((0, 0, -t + pi/2 - p2), "XYZ").to_quaternion().to_matrix().to_4x4()
+
+            # composite matrix
+            m = m_t @ m_r
+
+            return m
+
+        r = a + b * sign
+        g = r / b
         t = 2 * pi * t
 
-        mo_t = Matrix().Identity(4)
-        mi_t = Matrix().Identity(4)
+        m_t = Matrix().Identity(4)
 
         # translation
-        mo_t[0][3] = ro * cos(t + p1)
-        mo_t[1][3] = ro * sin(t + p1)
-        mo_t[2][3] = 0
-
-        mi_t[0][3] = ri * cos(t + p1)
-        mi_t[1][3] = ri * sin(t + p1)
-        mi_t[2][3] = 0
+        m_t[0][3] = r * cos(t + p1)
+        m_t[1][3] = r * sin(t + p1)
+        m_t[2][3] = 0
 
         # rotation
-        mo_r = Euler((0, 0, +(go * t + p1)), "XYZ").to_quaternion().to_matrix().to_4x4()
-        mi_r = Euler((0, 0, -(gi * t + p1)), "XYZ").to_quaternion().to_matrix().to_4x4()
+        m_r = Euler((0, 0, sign * (g * t + p2)), "XYZ").to_quaternion().to_matrix().to_4x4()
 
         # composite matrix
-        mo = mo_t @ mo_r
-        mi = mi_t @ mi_r
+        m = m_t @ m_r
 
-        return mi, mo
+        return m
 
     def make_trochoid(self, r1, r2, d, p1, p2, t, n, f, s):
         """
@@ -310,6 +330,9 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
         edges = []
 
         a, b, p1, p2 = [r2, r1, p2, p1] if self.swap else [r1, r2, p1, p2]
+
+        ts = b / gcd(a, b)
+        t = t * ts if self.turn_strech else t
 
         if self.normalize:  # normalize ? => set scale to fit the normalize size
             if self.trochoid_type == "EPI":
@@ -334,8 +357,8 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
             fx = lambda t: r * cos(t + p1) + d * cos(g * t + p2)
             fy = lambda t: r * sin(t + p1) - d * sin(g * t + p2)
         else:  # LINE
-            fx = lambda t: b * t - d * sin(t + p1)
-            fy = lambda t: b - d * cos(t + p1)
+            fx = lambda t: b * t - d * sin(t + p2)
+            fy = lambda t: b - d * cos(t + p2)
 
         v = lambda t: [fx(t), fy(t), 0]
 
@@ -350,10 +373,10 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
         dx, dy, dz = [vl[0] - vf[0], vl[1] - vf[1], vl[2] - vf[2]]
         delta = sqrt(dx * dx + dy * dy + dz * dz)
 
-        if delta < epsilon:
+        if delta < epsilon: # close the curve
             del verts[-1]
             edges = get_edge_loop(n)
-        else:
+        else: # keep the curve open
             edges = get_edge_list(n)
 
         return verts, edges
@@ -394,8 +417,7 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
 
         vert_list = []
         edge_list = []
-        m1_list = []
-        m2_list = []
+        m_list = []
         max_r_list = []
         min_r_list = []
         for r1, r2, d, p1, p2, t, n, f, s in zip(*parameters):
@@ -403,9 +425,8 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
             vert_list.append(verts)
             edge_list.append(edges)
 
-            m1, m2 = self.circle_transforms(r1, r2, d, p1 * au, p2 * au, t, n, s)
-            m1_list.append(m1)
-            m2_list.append(m2)
+            m = self.circle_transform(r1, r2, d, p1 * au, p2 * au, t, n, s)
+            m_list.append(m)
 
             max_r, min_r = self.grid_range(r1, r2, d, s)
             max_r_list.append(max_r)
@@ -416,10 +437,8 @@ class SvTrochoidNode(bpy.types.Node, SverchCustomTreeNode, SvAngleHelper):
         if outputs["Edges"].is_linked:
             outputs["Edges"].sv_set(edge_list)
 
-        if outputs["M1"].is_linked:
-            outputs["M1"].sv_set(m1_list)
-        if outputs["M2"].is_linked:
-            outputs["M2"].sv_set(m2_list)
+        if outputs["M"].is_linked:
+            outputs["M"].sv_set(m_list)
 
         if outputs["Max R"].is_linked:
             outputs["Max R"].sv_set([max_r_list])
