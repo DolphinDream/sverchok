@@ -70,39 +70,39 @@ class SvMiniVoxelizerNode(bpy.types.Node, SverchCustomTreeNode):
     bl_label = 'Mini Voxelizer'
     # bl_icon = 'PROP_CON'
 
-    focus_range = IntProperty(
+    focus_range: IntProperty(
         name="Focus Range", description="Number of voxels around the focus point",
         default=2, min=1, max=3, update=updateNode)
 
-    padding = IntProperty(
+    padding: IntProperty(
         name="Padding", description="Number of padding voxels on each side",
         default=4, min=2, update=updateNode)
 
-    resolution = FloatProperty(
+    resolution: FloatProperty(
         name="Resolution", description="Voxel resolution",
         default=0.25, min=0.0, update=updateNode)
 
     def sv_init(self, context):
         self.width = 170
-        self.inputs.new('VerticesSocket', "Vertices")
-        self.inputs.new('VerticesSocket', "Focus")
-        self.inputs.new('StringsSocket', "Focus Range").prop_name = "focus_range"
-        self.inputs.new('StringsSocket', "Resolution").prop_name = "resolution"
-        self.inputs.new('StringsSocket', "Padding").prop_name = "padding"
+        self.inputs.new('SvVerticesSocket', "Vertices")
+        self.inputs.new('SvVerticesSocket', "Focus")
+        self.inputs.new('SvStringsSocket', "Focus Range").prop_name = "focus_range"
+        self.inputs.new('SvStringsSocket', "Resolution").prop_name = "resolution"
+        self.inputs.new('SvStringsSocket', "Padding").prop_name = "padding"
 
-        self.outputs.new('VerticesSocket', "Volume Origin")
-        self.outputs.new('VerticesSocket', "Volume Center")
-        self.outputs.new('VerticesSocket', "Volume Tight Size")
-        self.outputs.new('VerticesSocket', "Volume Padded Size")
+        self.outputs.new('SvVerticesSocket', "Volume Origin")
+        self.outputs.new('SvVerticesSocket', "Volume Center")
+        self.outputs.new('SvVerticesSocket', "Volume Tight Size")
+        self.outputs.new('SvVerticesSocket', "Volume Padded Size")
 
-        self.outputs.new('StringsSocket', "Volume Dimensions")
+        self.outputs.new('SvStringsSocket', "Volume Dimensions")
 
-        self.outputs.new('VerticesSocket', "Tight Bounds")
-        self.outputs.new('VerticesSocket', "Padded Bounds")
+        self.outputs.new('SvVerticesSocket', "Tight Bounds")
+        self.outputs.new('SvVerticesSocket', "Padded Bounds")
 
-        self.outputs.new('VerticesSocket', "Voxel Size")
-        self.outputs.new('VerticesSocket', "Focus Center")
-        self.outputs.new('VerticesSocket', "Focus Array")
+        self.outputs.new('SvVerticesSocket', "Voxel Size")
+        self.outputs.new('SvVerticesSocket', "Focus Center")
+        self.outputs.new('SvVerticesSocket', "Focus Array")
 
     def process(self):
         # return if no outputs are connected
