@@ -784,4 +784,5 @@
 
 ## Smith & Nephew Nodes
     SvSNMatrixNode
+    SvMiniVoxelizerNode
 

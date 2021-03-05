@@ -25,12 +25,22 @@ class SVOB3B_UL_NamesList(bpy.types.UIList):
 
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
 
+        if item.name not in bpy.data.objects:
+            return
+
         item_icon = item.icon
         if not item.icon or item.icon == "BLANK1":
             try:
                 item_icon = 'OUTLINER_OB_' + bpy.data.objects[item.name].type
             except:
+                # print("***** icon exception *****")
                 item_icon = ""
+
+        # print("")
+        # print("***** item.name = ", item.name)
+        # print("***** item.icon = ", item.icon)
+        # print("***** item_icon = ", item_icon)
+        # print("")
 
         layout.label(text=item.name, icon=item_icon)
         action = data.wrapper_tracked_ui_draw_op(layout, "node.sv_ob3b_collection_operator", icon='X', text='')
