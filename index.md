@@ -778,11 +778,8 @@
     ---
     SvGetPropNodeMK2
     SvSetPropNodeMK2
-    ---
-    SvMotionPathLoadNode
-    SvMatrixLoadNode
 
 ## Smith & Nephew Nodes
-    SvSNMatrixNode
     SvMiniVoxelizerNode
-
+    SvMotionPathLoadNode
+    SvMatrixLoadNode
