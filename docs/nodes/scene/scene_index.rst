@@ -18,3 +18,4 @@ Scene
    node_remote_mk2
    selection_grabber_lite
    timer
+   viewer_layer

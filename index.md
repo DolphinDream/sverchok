@@ -663,6 +663,8 @@
     ---
     SvFrameInfoNodeMK2
     SvTimerNode
+    ---
+    SvViewerLayerNode
 
 ## Objects
     SvVertexGroupNodeMK2

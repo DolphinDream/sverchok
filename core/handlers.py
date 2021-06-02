@@ -18,6 +18,42 @@ pre_running = False
 sv_depsgraph = []
 depsgraph_need = False
 
+subscription_owner = object()
+
+"""
+The nodes that need to subscribe to object/attribute changes should call this
+convenience function from within their setup_subscription method (typically
+invoked by the sv_setup_subscriptions below, after loading a blender file).
+"""
+def subscribe_to_changes(subscribe_to, message, callback):
+    debug("* handlers: subscribe_to_changes: %s", message)
+    bpy.msgbus.subscribe_rna(
+        key=subscribe_to,
+        owner=subscription_owner,
+        args=(message,),
+        notify=callback,
+        options={"PERSISTENT", }
+    )
+
+
+"""
+This is called automatically after loading a blender file (load_post) to give
+all the nodes the opportunity to (re)subscribe to object/attribute changes.
+
+A node that needs to subscribe to object/attribute changes should implement a
+setup_subscriptions method and within that method use the subscribe_to_changes
+convenience function above to setup all its necesssary subscriptions.
+"""
+def sv_setup_subscriptions():
+    debug("* handlers: sv_setup_subscriptions")
+
+    for node_tree in sverchok_trees():
+        for node in node_tree.nodes:
+            setup_subscriptions = getattr(node, "setup_subscriptions", None)
+            if callable(setup_subscriptions):
+                node.setup_subscriptions()
+
+
 def get_sv_depsgraph():
     global sv_depsgraph
     global depsgraph_need
@@ -194,6 +230,9 @@ def sv_post_load(scene):
     # when a file is opened as a startup file update method of its trees is not called (Blender inconsistency??)
     for tree in BlTrees().sv_main_trees:
         tree.update()
+
+    # update setup subscriptions
+    sv_setup_subscriptions()
 
 
 def set_frame_change(mode):
