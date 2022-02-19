@@ -186,7 +186,7 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
         default=1.0, min=0.0, update=updateNode)
 
     turn_stretch: BoolProperty(
-        name='Stretch Turn', description='Stretch the turns in order to close trochoid path',
+        name='Stretch Turn', description='Stretch the turns in order to close the trochoid path',
         default=False, update=updateNode)
 
     demo_mode: BoolProperty(
@@ -210,16 +210,8 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
         self.outputs.new('SvVerticesSocket', "Vertices")
         self.outputs.new('SvStringsSocket', "Edges")
 
-        # demo mode sockets
-        self.outputs.new('SvVerticesSocket', "Full Turns Vertices")
-        self.outputs.new('SvStringsSocket', "Full Turns Edges")
-        self.outputs.new('SvVerticesSocket', "Scaled r1 r2 d")
-        self.outputs.new('SvMatrixSocket', "Moving Circle Transform")
-        self.outputs.new('SvVerticesSocket', "Min Range")
-        self.outputs.new('SvVerticesSocket', "Max Range")
-        self.outputs.new('SvStringsSocket', "Normalized Scale")
-
-        self.outputs.new('SvDictionarySocket', "Data")
+        # demo-mode settings
+        self.outputs.new('SvDictionarySocket', "Demo Data")
 
         self.presets = "ROSETTE"
         self.update_sockets()
@@ -249,19 +241,12 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
             socket = self.inputs[-1]
             socket.replace_socket("SvStringsSocket", "S").prop_name = "scale"
 
-        # demo mode sockets
-        self.outputs["Full Turns Vertices"].hide_safe = not self.demo_mode
-        self.outputs["Full Turns Edges"].hide_safe = not self.demo_mode
-        self.outputs["Scaled r1 r2 d"].hide_safe = not self.demo_mode
-        self.outputs["Min Range"].hide_safe = not self.demo_mode
-        self.outputs["Max Range"].hide_safe = not self.demo_mode
-        self.outputs["Moving Circle Transform"].hide_safe = not self.demo_mode
-        self.outputs["Normalized Scale"].hide_safe = not self.demo_mode
-        self.outputs["Data"].hide_safe = not self.demo_mode
+        # demo-mode settings 
+        self.outputs["Demo Data"].hide_safe = not self.demo_mode
 
     def scaling_factor(self, s, a, b, d):
         """
-        Returns the scaling factor that keeps the curve to the given normalized size.
+        Returns the scaling factor that keeps the curve to the given normalized size
 
         Args:
             s : scale / size
@@ -323,7 +308,7 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
             min_range = [min_x_range, min_y_range, 0]
             max_range = [max_x_range, max_y_range, 0]
 
-        return min_range, max_range
+        return tuple(min_range), tuple(max_range)
 
     @profile
     def moving_circle_transform(self, r1, r2, d, p1, p2, t, n, s):
@@ -428,7 +413,7 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
             def fx(t): return b * t - d * sin(t + p2)
             def fy(t): return b - d * cos(t + p2)
 
-        def v(t): return [fx(t), fy(t), 0]
+        def v(t): return tuple([fx(t), fy(t), 0])
 
         n = max(3, int(t * n))  # total number of points in all turns
         dt = 2 * pi * t / n  # turn increment
@@ -449,6 +434,71 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
 
         return verts, edges
 
+    def process_demo_mode(self, parameters):
+        """Update output data whenever the demo mode is active """
+        
+         # conversion factor from the current angle units to radians
+        au = self.radians_conversion_factor()
+        
+        matrix_list = []
+        scaled_rrd_list = []
+        draw_point_list = []
+        max_range_list = []
+        min_range_list = []
+        normalized_scale_list = []
+        vert_list = []
+        edge_list = []
+        for r1, r2, d, p1, p2, t, n, f, s in zip(*parameters):
+            verts, edges = self.make_trochoid(r1, r2, d, p1 * au, p2 * au, self.turns, n, f, s)
+            vert_list.append(verts)
+            edge_list.append(edges)
+            
+            m = self.moving_circle_transform(r1, r2, d, p1 * au, p2 * au, t, n, s)
+            matrix_list.append(m)
+           
+            min_range, max_range = self.grid_range(r1, r2, d, p1 * au, p2 * au, t, s)
+            min_range_list.append(min_range)
+            max_range_list.append(max_range)
+
+            ss = self.scaling_factor(s, r1, r2, d)
+            normalized_scale_list.append(ss)
+            
+            scaled_rrd = tuple([r1*ss, r2*ss, d*ss])
+            scaled_rrd_list.append(scaled_rrd)
+            
+            draw_point = tuple([d*ss if self.trochoid_type == "HYPO" else -d*ss, 0, 0])
+            draw_point_list.append(draw_point)
+            
+        data = SvDict()
+        
+        data["Full Turns Vertices"] = vert_list[0]
+        data.inputs["Data1"] = { "type": "SvVerticesSocket",  "name": "Full Turns Vertices", "nest": None }
+
+        data["Full Turns Edges"] = edge_list[0]
+        data.inputs["Data2"] = { "type": "SvStringsSocket", "name": "Full Turns Edges", "nest": None }
+     
+        data["Scaled r1 r2 d"] = scaled_rrd_list[0]
+        data.inputs["Data3"] = { "type": "SvVerticesSocket", "name": "Scaled r1 r2 d", "nest": None }
+        
+        data["Min Range"] = min_range_list[0]
+        data.inputs["Data4"] = { "type": "SvVerticesSocket", "name": "Min Range", "nest": None } 
+        
+        data["Max Range"] = max_range_list[0]
+        data.inputs["Data5"] = { "type": "SvVerticesSocket", "name": "Max Range", "nest": None }
+
+        data["Moving Circle Transform"] = matrix_list[0]
+        data.inputs["Data6"] = { "type": "SvMatrixSocket", "name": "Moving Circle Transform", "nest": None }
+        
+        data["Normalized Scale"] = normalized_scale_list[0]
+        data.inputs["Data7"] = { "type": "SvStringsSocket", "name": "Normalized Scale", "nest": None }     
+
+        data["Draw Point"] = draw_point_list
+        data.inputs["Data8"] = { "type": "SvVerticesSocket", "name": "Draw Point", "nest": None }   
+        
+        if self.outputs["Demo Data"].is_linked:
+            self.outputs["Demo Data"].sv_set([data])
+                
+                
     @profile
     def process(self):
         outputs = self.outputs
@@ -466,7 +516,7 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
         input_t = inputs["Turns"].sv_get()[0]      # turns
         input_n = inputs["Resolution"].sv_get()[0] # resolution
         input_f = inputs["Shift"].sv_get()[0]      # shift
-        input_s = inputs["S"].sv_get()[0]          # scale
+        input_s = inputs["S"].sv_get()[0]          # scale/size
 
         # sanitize the inputs
         input_r1 = list(map(lambda x: max(0.0, x), input_r1))
@@ -495,70 +545,9 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
         if outputs["Edges"].is_linked:
             outputs["Edges"].sv_set(edge_list)
 
-        # demo mode sockets
+        # demo-mode updates
         if self.demo_mode:
-            matrix_list = []
-            scaled_rrd_list = []
-            max_range_list = []
-            min_range_list = []
-            normalized_scale_list = []
-            v_list = []
-            e_list = []
-            for r1, r2, d, p1, p2, t, n, f, s in zip(*parameters):
-                v, e = self.make_trochoid(r1, r2, d, p1 * au, p2 * au, self.turns, n, f, s)
-                v_list.append(v)
-                e_list.append(e)
-                
-                m = self.moving_circle_transform(r1, r2, d, p1 * au, p2 * au, t, n, s)
-                matrix_list.append(m)
-
-                ss = self.scaling_factor(s, r1, r2, d)
-                scaled_rrd_list.append([r1*ss, r2*ss, d*ss if self.trochoid_type == "HYPO" else -d*ss])
-
-                min_range, max_range = self.grid_range(r1, r2, d, p1 * au, p2 * au, t, s)
-                min_range_list.append(min_range)
-                max_range_list.append(max_range)
-
-                normalized_scale_list.append(ss)
-                
-            if outputs["Full Turns Vertices"].is_linked:
-                outputs["Full Turns Vertices"].sv_set(v_list)
-            if outputs["Full Turns Edges"].is_linked:
-                outputs["Full Turns Edges"].sv_set(e_list)
-            if outputs["Scaled r1 r2 d"].is_linked:
-                outputs["Scaled r1 r2 d"].sv_set([scaled_rrd_list])
-            if outputs["Max Range"].is_linked:
-                outputs["Max Range"].sv_set([max_range_list])
-            if outputs["Min Range"].is_linked:
-                outputs["Min Range"].sv_set([min_range_list])
-            if outputs["Moving Circle Transform"].is_linked:
-                outputs["Moving Circle Transform"].sv_set(matrix_list)
-            if outputs["Normalized Scale"].is_linked:
-                outputs["Normalized Scale"].sv_set([normalized_scale_list])
-                
-            data = SvDict()
-            
-            data["Full Turns Vertices"] = v_list[0]
-            data.inputs["Data1"] = {
-                "type": "SvVerticesSocket", 
-                "name": "Full Turns Vertices", 
-                "nest": None }
- 
-            data["Full Turns Edges"] = e_list[0]
-            data.inputs["Data2"] = {
-                "type": "SvStringsSocket", 
-                "name": "Full Turns Edges", 
-                "nest": None }
-                       
-            print("----")
-            print("data=")
-            pprint(data)
-            print("data.inputs=")
-            pprint(data.inputs)
-            print("----")
-            
-            if outputs["Data"].is_linked:
-                outputs["Data"].sv_set([data])
+            self.process_demo_mode(parameters)
              
 
 def register():
