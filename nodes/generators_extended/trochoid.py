@@ -21,14 +21,13 @@ from bpy.props import BoolProperty, IntProperty, FloatProperty, EnumProperty
 
 from sverchok.node_tree import SverchCustomTreeNode
 from sverchok.data_structure import (match_long_repeat, updateNode, get_edge_list, get_edge_loop)
-from sverchok.utils.sv_transform_helper import AngleUnits, SvAngleHelper
+from sverchok.utils.sv_transform_helper import SvAngleHelper
 
 from math import sin, cos, pi, sqrt, gcd, acos, ceil
-from mathutils import Quaternion, Matrix, Euler
+from mathutils import Matrix, Euler
 
 from sverchok.utils.dictionary import SvDict
 from sverchok.utils.profile import profile
-from pprint import pprint
 
 epsilon = 1e-5  # used to avoid division by zero
 
@@ -96,19 +95,19 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
         if self.updating:
             return
 
-        self.presets = " "  # clear the preset if any setting changes
+        self.preset = " "  # clear the preset if any setting changes
         updateNode(self, context)
 
     def preset_items(self, context):
         return [(k, k.title(), "", "", s[0]) for k, s in sorted(trochoid_presets.items(), key=lambda k: k[1][0])]
 
     def update_presets(self, context):
-        if self.presets == " ":
+        if self.preset == " ":
             return
 
         self.updating = True
 
-        tt, r1, r2, d, p1, p2, t, n = trochoid_presets[self.presets][1:]
+        tt, r1, r2, d, p1, p2, t, n = trochoid_presets[self.preset][1:]
         self.trochoid_type = tt
         self.radius1 = r1
         self.radius2 = r2
@@ -126,7 +125,7 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
 
         updateNode(self, context)
 
-    presets: EnumProperty(
+    preset: EnumProperty(
         name="Presets", items=preset_items, update=update_presets)
 
     trochoid_type: EnumProperty(
@@ -162,7 +161,6 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
     shift: FloatProperty(
         name='Shift', description='Shift the starting point along the curve',
         default=0.0, update=update_trochoid)
-        # default=0.0, min=0.0, max=1.0, update=update_trochoid)
 
     resolution: IntProperty(
         name='Resolution',
@@ -213,11 +211,11 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
         # demo-mode settings
         self.outputs.new('SvDictionarySocket', "Demo Data")
 
-        self.presets = "ROSETTE"
+        self.preset = "ROSETTE"
         self.update_sockets()
 
     def draw_buttons(self, context, layout):
-        layout.prop(self, 'presets', text="")
+        layout.prop(self, 'preset', text="")
         col = layout.column(align=True)
         row = col.row(align=True)
         row.prop(self, "trochoid_type", expand=True)
@@ -252,7 +250,7 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
             s : scale / size
             a : static circle radius
             b : moving circle radius
-            d : distance
+            d : drawing point distance
 
         Returns:
             The normalized scaling factor
@@ -437,9 +435,6 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
     def process_demo_mode(self, parameters):
         """Update output data whenever the demo mode is active """
         
-         # conversion factor from the current angle units to radians
-        au = self.radians_conversion_factor()
-        
         matrix_list = []
         scaled_rrd_list = []
         draw_point_list = []
@@ -449,14 +444,14 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
         vert_list = []
         edge_list = []
         for r1, r2, d, p1, p2, t, n, f, s in zip(*parameters):
-            verts, edges = self.make_trochoid(r1, r2, d, p1 * au, p2 * au, self.turns, n, f, s)
+            verts, edges = self.make_trochoid(r1, r2, d, p1, p2, self.turns, n, f, s)
             vert_list.append(verts)
             edge_list.append(edges)
             
-            m = self.moving_circle_transform(r1, r2, d, p1 * au, p2 * au, t, n, s)
+            m = self.moving_circle_transform(r1, r2, d, p1, p2, t, n, s)
             matrix_list.append(m)
            
-            min_range, max_range = self.grid_range(r1, r2, d, p1 * au, p2 * au, t, s)
+            min_range, max_range = self.grid_range(r1, r2, d, p1, p2, t, s)
             min_range_list.append(min_range)
             max_range_list.append(max_range)
 
@@ -492,8 +487,8 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
         data["Normalized Scale"] = normalized_scale_list[0]
         data.inputs["Data7"] = { "type": "SvStringsSocket", "name": "Normalized Scale", "nest": None }     
 
-        data["Draw Point"] = draw_point_list
-        data.inputs["Data8"] = { "type": "SvVerticesSocket", "name": "Draw Point", "nest": None }   
+        data["Drawing Point"] = draw_point_list
+        data.inputs["Data8"] = { "type": "SvVerticesSocket", "name": "Drawing Point", "nest": None }   
         
         if self.outputs["Demo Data"].is_linked:
             self.outputs["Demo Data"].sv_set([data])
@@ -525,18 +520,22 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
         input_t = list(map(lambda x: max(0.0, x), input_t))
         input_n = list(map(lambda x: max(3, int(x)), input_n))
         input_s = list(map(lambda x: max(0.0, x), input_s))
+        
+        # conversion factor from the current angle units to radians
+        au = self.radians_conversion_factor()
 
+        # convert phase angles to radians
+        input_p1 = [p1 * au for p1 in input_p1]
+        input_p2 = [p2 * au for p2 in input_p2]
+        
         parameters = match_long_repeat([input_r1, input_r2, input_d,
                                         input_p1, input_p2, input_t,
                                         input_n, input_f, input_s])
 
-        # conversion factor from the current angle units to radians
-        au = self.radians_conversion_factor()
-
         vert_list = []
         edge_list = []
         for r1, r2, d, p1, p2, t, n, f, s in zip(*parameters):
-            verts, edges = self.make_trochoid(r1, r2, d, p1 * au, p2 * au, t, n, f, s)
+            verts, edges = self.make_trochoid(r1, r2, d, p1, p2, t, n, f, s)
             vert_list.append(verts)
             edge_list.append(edges)
 
