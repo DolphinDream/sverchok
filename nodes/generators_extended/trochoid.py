@@ -50,10 +50,15 @@ trochoid_presets = {
     "CARDIOID":             (20, "EPI", 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200),
     "NEPHROID":             (21, "EPI", 2.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200),
     "RANUNCULOID":          (22, "EPI", 5.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200),
+    "FLOWER OF LIFE":       (23, "EPI", 6.0, 1.0, 7.0, 0.0, 180.0, 1.0, 300),
+    "VESICA PISCIS":        (24, "EPI", 2.0, 1.0, 5.0, 0.0, 0.0, 1.0, 200),
     # HYPOs
     "DELTOID":              (30, "HYPO", 3.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200),
     "ASTROID":              (31, "HYPO", 4.0, 1.0, 1.0, 0.0, 0.0, 1.0, 200),
     "ROSETTE":              (32, "HYPO", 6.0, 1.0, 5.0, 0.0, 0.0, 1.0, 300),
+    "LINE":                 (33, "HYPO", 2.0, 1.0, 1.0, 0.0, 0.0, 1.0, 100),
+    "EYE":                  (34, "HYPO", 2.0, 1.0, 3.0, 0.0, 0.0, 1.0, 200),
+    "GOOD LUCK CHARM":      (35, "HYPO", 4.0, 1.0, 3.0, 0.0, 0.0, 1.0, 200),
     # other somewhat interesting EPIs
     "E 6-1-5":              (40, "EPI", 6.0, 1.0, 5.0, 0.0, 0.0, 1.0, 300),
     "E 6-3-1":              (41, "EPI", 6.0, 3.0, 1.0, 0.0, 0.0, 1.0, 200),
@@ -239,7 +244,7 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
             socket = self.inputs[-1]
             socket.replace_socket("SvStringsSocket", "S").prop_name = "scale"
 
-        # demo-mode settings 
+        # demo-mode settings
         self.outputs["Demo Data"].hide_safe = not self.demo_mode
 
     def scaling_factor(self, s, a, b, d):
@@ -434,7 +439,7 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
 
     def process_demo_mode(self, parameters):
         """Update output data whenever the demo mode is active """
-        
+
         matrix_list = []
         scaled_rrd_list = []
         draw_point_list = []
@@ -447,53 +452,52 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
             verts, edges = self.make_trochoid(r1, r2, d, p1, p2, self.turns, n, f, s)
             vert_list.append(verts)
             edge_list.append(edges)
-            
+
             m = self.moving_circle_transform(r1, r2, d, p1, p2, t, n, s)
             matrix_list.append(m)
-           
+
             min_range, max_range = self.grid_range(r1, r2, d, p1, p2, t, s)
             min_range_list.append(min_range)
             max_range_list.append(max_range)
 
             ss = self.scaling_factor(s, r1, r2, d)
             normalized_scale_list.append(ss)
-            
+
             scaled_rrd = tuple([r1*ss, r2*ss, d*ss])
             scaled_rrd_list.append(scaled_rrd)
-            
+
             draw_point = tuple([d*ss if self.trochoid_type == "HYPO" else -d*ss, 0, 0])
             draw_point_list.append(draw_point)
-            
+
         data = SvDict()
-        
+
         data["Full Turns Vertices"] = vert_list[0]
-        data.inputs["Data1"] = { "type": "SvVerticesSocket",  "name": "Full Turns Vertices", "nest": None }
+        data.inputs["Data1"] = {"type": "SvVerticesSocket",  "name": "Full Turns Vertices", "nest": None}
 
         data["Full Turns Edges"] = edge_list[0]
-        data.inputs["Data2"] = { "type": "SvStringsSocket", "name": "Full Turns Edges", "nest": None }
-     
+        data.inputs["Data2"] = {"type": "SvStringsSocket", "name": "Full Turns Edges", "nest": None}
+
         data["Scaled r1 r2 d"] = scaled_rrd_list[0]
-        data.inputs["Data3"] = { "type": "SvVerticesSocket", "name": "Scaled r1 r2 d", "nest": None }
-        
+        data.inputs["Data3"] = {"type": "SvVerticesSocket", "name": "Scaled r1 r2 d", "nest": None}
+
         data["Min Range"] = min_range_list[0]
-        data.inputs["Data4"] = { "type": "SvVerticesSocket", "name": "Min Range", "nest": None } 
-        
+        data.inputs["Data4"] = {"type": "SvVerticesSocket", "name": "Min Range", "nest": None}
+
         data["Max Range"] = max_range_list[0]
-        data.inputs["Data5"] = { "type": "SvVerticesSocket", "name": "Max Range", "nest": None }
+        data.inputs["Data5"] = {"type": "SvVerticesSocket", "name": "Max Range", "nest": None}
 
         data["Moving Circle Transform"] = matrix_list[0]
-        data.inputs["Data6"] = { "type": "SvMatrixSocket", "name": "Moving Circle Transform", "nest": None }
-        
+        data.inputs["Data6"] = {"type": "SvMatrixSocket", "name": "Moving Circle Transform", "nest": None}
+
         data["Normalized Scale"] = normalized_scale_list[0]
-        data.inputs["Data7"] = { "type": "SvStringsSocket", "name": "Normalized Scale", "nest": None }     
+        data.inputs["Data7"] = {"type": "SvStringsSocket", "name": "Normalized Scale", "nest": None}
 
         data["Drawing Point"] = draw_point_list
-        data.inputs["Data8"] = { "type": "SvVerticesSocket", "name": "Drawing Point", "nest": None }   
-        
+        data.inputs["Data8"] = {"type": "SvVerticesSocket", "name": "Drawing Point", "nest": None}
+
         if self.outputs["Demo Data"].is_linked:
             self.outputs["Demo Data"].sv_set([data])
-                
-                
+
     @profile
     def process(self):
         outputs = self.outputs
@@ -509,7 +513,7 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
         input_p1 = inputs["Phase1"].sv_get()[0]    # phase P1
         input_p2 = inputs["Phase2"].sv_get()[0]    # phase P2
         input_t = inputs["Turns"].sv_get()[0]      # turns
-        input_n = inputs["Resolution"].sv_get()[0] # resolution
+        input_n = inputs["Resolution"].sv_get()[0]  # resolution
         input_f = inputs["Shift"].sv_get()[0]      # shift
         input_s = inputs["S"].sv_get()[0]          # scale/size
 
@@ -520,14 +524,14 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
         input_t = list(map(lambda x: max(0.0, x), input_t))
         input_n = list(map(lambda x: max(3, int(x)), input_n))
         input_s = list(map(lambda x: max(0.0, x), input_s))
-        
+
         # conversion factor from the current angle units to radians
         au = self.radians_conversion_factor()
 
         # convert phase angles to radians
         input_p1 = [p1 * au for p1 in input_p1]
         input_p2 = [p2 * au for p2 in input_p2]
-        
+
         parameters = match_long_repeat([input_r1, input_r2, input_d,
                                         input_p1, input_p2, input_t,
                                         input_n, input_f, input_s])
@@ -547,7 +551,7 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
         # demo-mode updates
         if self.demo_mode:
             self.process_demo_mode(parameters)
-             
+
 
 def register():
     bpy.utils.register_class(SvTrochoidNode)
