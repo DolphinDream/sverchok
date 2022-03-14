@@ -120,6 +120,7 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
         self.phase1 = p1
         self.phase2 = p2
         self.turns = t
+        self.shift = 0
         self.resolution = n
         self.scale = 1.0
         self.normalize_size = 1.0
@@ -513,7 +514,7 @@ class SvTrochoidNode(SverchCustomTreeNode, bpy.types.Node, SvAngleHelper):
         input_p1 = inputs["Phase1"].sv_get()[0]    # phase P1
         input_p2 = inputs["Phase2"].sv_get()[0]    # phase P2
         input_t = inputs["Turns"].sv_get()[0]      # turns
-        input_n = inputs["Resolution"].sv_get()[0]  # resolution
+        input_n = inputs["Resolution"].sv_get()[0] # resolution
         input_f = inputs["Shift"].sv_get()[0]      # shift
         input_s = inputs["S"].sv_get()[0]          # scale/size
 
